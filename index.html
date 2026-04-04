@@ -4,16 +4,152 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>UWTimeSchd</title>
-    <!-- Using Tailwind CSS via CDN for quick, beautiful styling -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.8.0/sql-wasm.js"></script>
+    <style>
+        /* CSS to hide the default details triangle */
+        details > summary { list-style: none; }
+        details > summary::-webkit-details-marker { display: none; }
+    </style>
 </head>
-<body class="bg-gray-50 flex items-center justify-center min-h-screen font-sans">
-    <div class="text-center p-8 bg-white rounded-2xl shadow-sm border border-gray-100 max-w-md w-full mx-4">     
-        <!-- Typography -->
-        <h1 class="text-2xl font-bold text-gray-900 mb-2">UWTimeSchd</h1>
-        <p class="text-gray-500 mb-8 leading-relaxed">
-            The historical time schedule archive is currently under construction. Check back soon!
-        </p>
+<body class="bg-gray-50 flex items-start justify-center min-h-screen font-sans pt-12 pb-12">
+    <div class="p-8 bg-white rounded-2xl shadow-sm border border-gray-100 max-w-5xl w-full mx-4">
+        
+        <h1 class="text-3xl font-bold text-gray-900 mb-2 text-center">UWTimeSchd Archive</h1>
+        <p class="text-gray-500 mb-8 text-center" id="status-text">Loading database...</p>
+        
+        <!-- Search & Sort Controls -->
+        <div class="flex flex-col md:flex-row gap-3 mb-6">
+            <input 
+                type="text" 
+                id="search-input" 
+                placeholder="Search prefix, course number, title, or instructor (e.g., AA210, Hurlen)..." 
+                class="flex-1 p-4 text-lg border border-gray-300 rounded-xl shadow-sm focus:ring-2 focus:ring-purple-500 outline-none disabled:bg-gray-100"
+                disabled
+            >
+            <select 
+                id="sort-select" 
+                class="p-4 text-lg border border-gray-300 rounded-xl shadow-sm bg-white focus:ring-2 focus:ring-purple-500 outline-none disabled:bg-gray-100 cursor-pointer"
+                disabled
+            >
+                <option value="newest">Newest First</option>
+                <option value="oldest">Oldest First</option>
+                <option value="alpha">Course (A-Z)</option>
+            </select>
+            <button 
+                id="search-btn"
+                class="px-8 py-4 bg-purple-700 hover:bg-purple-800 text-white font-bold rounded-xl shadow-sm disabled:opacity-50 transition-colors whitespace-nowrap"
+                disabled
+            >
+                Search
+            </button>
+        </div>
+
+        <!-- Filters Panel (Permanent) -->
+        <div id="filters-panel" class="mb-6 p-6 bg-purple-50/50 border border-purple-100 rounded-xl shadow-inner">
+            <h3 class="text-xs font-bold text-purple-800 uppercase tracking-wider mb-4">Refine Results</h3>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                <!-- Status Filter -->
+                <div>
+                    <label class="block text-xs font-semibold text-gray-600 mb-1">Status</label>
+                    <select id="filter-status" class="w-full p-2 border border-gray-200 rounded text-sm outline-none focus:ring-1 focus:ring-purple-500 bg-white cursor-pointer">
+                        <option value="all">All Statuses</option>
+                        <option value="open">Open Only</option>
+                        <option value="closed">Closed Only</option>
+                    </select>
+                </div>
+                
+                <!-- Course Level Filter -->
+                <div>
+                    <label class="block text-xs font-semibold text-gray-600 mb-1">Course Level</label>
+                    <select id="filter-level" class="w-full p-2 border border-gray-200 rounded text-sm outline-none focus:ring-1 focus:ring-purple-500 bg-white cursor-pointer">
+                        <option value="all">All Levels</option>
+                        <option value="100">100 Level</option>
+                        <option value="200">200 Level</option>
+                        <option value="300">300 Level</option>
+                        <option value="400">400 Level</option>
+                        <option value="500">500+ Level</option>
+                    </select>
+                </div>
+
+                <!-- Credits Filter -->
+                <div>
+                    <label class="block text-xs font-semibold text-gray-600 mb-1">Credits</label>
+                    <select id="filter-credits" class="w-full p-2 border border-gray-200 rounded text-sm outline-none focus:ring-1 focus:ring-purple-500 bg-white cursor-pointer">
+                        <option value="all">Any Credits</option>
+                        <option value="1-2">1 - 2 Credits</option>
+                        <option value="3-4">3 - 4 Credits</option>
+                        <option value="5+">5+ Credits</option>
+                    </select>
+                </div>
+
+                <!-- Section Type Filter -->
+                <div>
+                    <label class="block text-xs font-semibold text-gray-600 mb-1">Section Type</label>
+                    <select id="filter-type" class="w-full p-2 border border-gray-200 rounded text-sm outline-none focus:ring-1 focus:ring-purple-500 bg-white cursor-pointer">
+                        <option value="all">All Types</option>
+                        <option value="lec">Lecture (LEC)</option>
+                        <option value="qz">Quiz (QZ)</option>
+                        <option value="lb">Lab (LB)</option>
+                    </select>
+                </div>
+
+                <!-- Fee Filter -->
+                <div>
+                    <label class="block text-xs font-semibold text-gray-600 mb-1">Course Fees</label>
+                    <select id="filter-fee" class="w-full p-2 border border-gray-200 rounded text-sm outline-none focus:ring-1 focus:ring-purple-500 bg-white cursor-pointer">
+                        <option value="all">Show All</option>
+                        <option value="no_fee">No Extra Fees</option>
+                        <option value="has_fee">Has Extra Fees</option>
+                    </select>
+                </div>
+
+                <!-- Prerequisites Filter -->
+                <div>
+                    <label class="block text-xs font-semibold text-gray-600 mb-1">Prerequisites</label>
+                    <select id="filter-prereq" class="w-full p-2 border border-gray-200 rounded text-sm outline-none focus:ring-1 focus:ring-purple-500 bg-white cursor-pointer">
+                        <option value="all">Show All</option>
+                        <option value="no">No Prereqs Required</option>
+                        <option value="yes">Has Prereqs</option>
+                    </select>
+                </div>
+
+                <!-- CR/NC Filter -->
+                <div>
+                    <label class="block text-xs font-semibold text-gray-600 mb-1">Grading</label>
+                    <select id="filter-crnc" class="w-full p-2 border border-gray-200 rounded text-sm outline-none focus:ring-1 focus:ring-purple-500 bg-white cursor-pointer">
+                        <option value="all">All Grading Types</option>
+                        <option value="crnc">CR/NC Only</option>
+                    </select>
+                </div>
+
+                <!-- Days Filter -->
+                <div>
+                    <label class="block text-xs font-semibold text-gray-600 mb-1">Meeting Days</label>
+                    <div class="flex flex-wrap gap-3 mt-2 text-sm">
+                        <label class="flex items-center gap-1 cursor-pointer"><input type="checkbox" value="M" class="day-filter w-4 h-4 text-purple-600 rounded"> M</label>
+                        <label class="flex items-center gap-1 cursor-pointer"><input type="checkbox" value="T" class="day-filter w-4 h-4 text-purple-600 rounded"> T</label>
+                        <label class="flex items-center gap-1 cursor-pointer"><input type="checkbox" value="W" class="day-filter w-4 h-4 text-purple-600 rounded"> W</label>
+                        <label class="flex items-center gap-1 cursor-pointer"><input type="checkbox" value="Th" class="day-filter w-4 h-4 text-purple-600 rounded"> Th</label>
+                        <label class="flex items-center gap-1 cursor-pointer"><input type="checkbox" value="F" class="day-filter w-4 h-4 text-purple-600 rounded"> F</label>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Toolbar (Expand/Collapse All) -->
+        <div id="toolbar" class="hidden flex justify-end gap-4 mb-4 text-sm">
+            <button onclick="toggleAll(true)" class="text-purple-700 hover:underline font-semibold">Expand All</button>
+            <button onclick="toggleAll(false)" class="text-gray-500 hover:underline font-semibold">Collapse All</button>
+        </div>
+
+        <!-- Results Container -->
+        <div id="results-container" class="space-y-4"></div>
+        
     </div>
+
+    <!-- External Logic loaded here -->
+    <script src="js/app.js"></script>
 </body>
 </html>
