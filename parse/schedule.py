@@ -223,13 +223,13 @@ def is_section_table(table):
 
 def parse_course_header(table):
     a_name = table.find('a', attrs={'name': True})
-    dept_num_text = a_name.get_text(strip=True).replace('\xa0', ' ')
+    prefix_num_text = a_name.get_text(strip=True).replace('\xa0', ' ')
     
-    m_dept = re.match(r'^(.+?)\s+(\d{3})$', dept_num_text)
-    if m_dept:
-        dept, num = m_dept.group(1).strip(), m_dept.group(2).strip()
+    m_prefix = re.match(r'^(.+?)\s+(\d{3})$', prefix_num_text)
+    if m_prefix:
+        prefix, num = m_prefix.group(1).strip(), m_prefix.group(2).strip()
     else:
-        dept, num = dept_num_text, ""
+        prefix, num = prefix_num_text, ""
 
     # Find the course title (e.g., from <a href="/students/crscat/aa.html#aa210">ENGR STATICS</a>)
     title_a = table.find('a', href=True)
@@ -239,12 +239,12 @@ def parse_course_header(table):
     prereq_text = prereq_td.get_text(strip=True) if prereq_td else ""
     
     return {
-        'department': dept,
+        'course_prefix': prefix,
         'course_number': num,
-        'course_title': course_title if course_title else None,
+        'course_title' : course_title if course_title else None,
         'prerequisites': prereq_text if prereq_text else None,
-        'notes': None,
-        'sections': []
+        'notes'        : None,
+        'sections'     : []
     }
 
 def parse_section_row(chunks):
@@ -258,19 +258,19 @@ def parse_section_row(chunks):
     i = extract_instructor(chunks.get('instructor', ''))
     
     return {
-        'restrictions': extract_restrictions(chunks.get('restr', '')),
-        'SLN': sln,
-        'section_id': extract_section_id(chunks.get('id', '')),
-        'credits': extract_credits(chunks.get('cred', '')),
-        'times': [t],
-        'building_room': [b],
-        'instructor': [i],
-        'status': extract_status(chunks.get('status', '')),
+        'restrictions'    : extract_restrictions(chunks.get('restr', '')),
+        'SLN'             : sln,
+        'section_id'      : extract_section_id(chunks.get('id', '')),
+        'credits'         : extract_credits(chunks.get('cred', '')),
+        'times'           : [t],
+        'building_room'   : [b],
+        'instructor'      : [i],
+        'status'          : extract_status(chunks.get('status', '')),
         'enrollment_limit': extract_enrollment(chunks.get('enrl', '')),
-        'grades': extract_grades(chunks.get('grades', '')),
-        'fee': extract_fee(chunks.get('fee', '')),
-        'other': extract_other(chunks.get('other', '')),
-        'notes': None
+        'grades'          : extract_grades(chunks.get('grades', '')),
+        'fee'             : extract_fee(chunks.get('fee', '')),
+        'other'           : extract_other(chunks.get('other', '')),
+        'notes'           : None
     }
 
 def parse_additional_times(chunks, current_section):

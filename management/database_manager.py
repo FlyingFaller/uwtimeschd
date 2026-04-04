@@ -19,7 +19,7 @@ def init_schedule_db(db_path: str = "data/schedules.db"):
                 quarter           TEXT,
                 college           TEXT,
                 major_name        TEXT,
-                department        TEXT,
+                course_prefix     TEXT,
                 course_number     INTEGER,
                 course_title      TEXT,
                 has_prerequisites BOOLEAN,
@@ -84,7 +84,7 @@ def init_schedule_db(db_path: str = "data/schedules.db"):
         )
         
         # Create an index on search-heavy fields to make the frontend lightning fast
-        cursor.execute("CREATE INDEX IF NOT EXISTS idx_course_dept ON courses(department, course_number);")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_course_dept ON courses(course_prefix, course_number);")
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_major ON courses(major_name);")
         
         conn.commit()
@@ -116,8 +116,8 @@ def insert_schedule_data(
         # 2. Iterate through the hierarchy and insert
         for c in courses:
             # Generate a unique string ID (e.g., "2024-AUT-AA-210")
-            dept_safe = str(c.get('department')).replace(" ", "")
-            course_id = f"{year}-{quarter}-{dept_safe}-{c.get('course_number')}"
+            prefix_safe = str(c.get('course_prefix')).replace(" ", "")
+            course_id = f"{year}-{quarter}-{prefix_safe}-{c.get('course_number')}"
             
             cursor.execute("""
                 INSERT INTO courses 
@@ -127,7 +127,7 @@ def insert_schedule_data(
                     quarter,
                     college,
                     major_name,
-                    department, 
+                    course_prefix, 
                     course_number, 
                     course_title, 
                     has_prerequisites, 
@@ -139,7 +139,7 @@ def insert_schedule_data(
                 quarter, 
                 college, 
                 major_name, 
-                c.get('department'),
+                c.get('course_prefix'),
                 c.get('course_number'), 
                 c.get('course_title'), 
                 c.get('has_prerequisites'), 

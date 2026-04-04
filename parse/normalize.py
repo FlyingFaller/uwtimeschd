@@ -12,12 +12,12 @@ def normalize_schedule_data(courses: list[dict]) -> list[dict]:
         c_num = clean_int(course.get('course_number'))
         
         cleaned_course = {
-            'department': course.get('department'),
-            'course_number': c_num if c_num is not None else course.get('course_number'),
-            'course_title': course.get('course_title'),
+            'course_prefix'    : course.get('course_prefix'),
+            'course_number'    : c_num if c_num is not None else course.get('course_number'),
+            'course_title'     : course.get('course_title'),
             'has_prerequisites': bool(course.get('prerequisites')),
-            'notes': course.get('notes'),
-            'sections': []
+            'notes'            : course.get('notes'),
+            'sections'         : []
         }
         
         # Clean Section Level
@@ -26,21 +26,21 @@ def normalize_schedule_data(courses: list[dict]) -> list[dict]:
             enrolled, limit, is_est = clean_enrollment(sec.get('enrollment_limit'))
             
             cleaned_sec = {
-                'section_id': sec.get('section_id'),
-                'SLN': clean_int(sec.get('SLN')),
-                'section_type': sec_type,
-                'credits_min': credits_min,
-                'credits_max': credits_max,
-                'status': sec.get('status'),
-                'enrolled': enrolled,
-                'enrollment_limit': limit,
-                'is_limit_estimate': is_est,
+                'section_id'         : sec.get('section_id'),
+                'SLN'                : clean_int(sec.get('SLN')),
+                'section_type'       : sec_type,
+                'credits_min'        : credits_min,
+                'credits_max'        : credits_max,
+                'status'             : sec.get('status'),
+                'enrolled'           : enrolled,
+                'enrollment_limit'   : limit,
+                'is_limit_estimate'  : is_est,
                 'is_credit_no_credit': sec.get('grades') == 'CR/NC',
-                'fee': clean_fee(sec.get('fee')),
-                'restrictions': clean_restrictions(sec.get('restrictions')),
-                'attributes': clean_other(sec.get('other')),
-                'meetings': [],
-                'notes': sec.get('notes')
+                'fee'                : clean_fee(sec.get('fee')),
+                'restrictions'       : clean_restrictions(sec.get('restrictions')),
+                'attributes'         : clean_other(sec.get('other')),
+                'meetings'           : [],
+                'notes'              : sec.get('notes')
             }
             
             # Zip the parallel lists of times, buildings, and instructors together
