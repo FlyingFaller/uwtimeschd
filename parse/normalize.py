@@ -1,6 +1,6 @@
 import re
 
-def clean_schedule_data(courses: list[dict]) -> list[dict]:
+def normalize_schedule_data(courses: list[dict]) -> list[dict]:
     """
     Takes the raw output from parse_schedule and normalizes all fields
     into strongly typed variables (ints, bools, and structured dicts).
@@ -36,7 +36,7 @@ def clean_schedule_data(courses: list[dict]) -> list[dict]:
                 'enrollment_limit': limit,
                 'is_limit_estimate': is_est,
                 'is_credit_no_credit': sec.get('grades') == 'CR/NC',
-                'fee_amount': clean_fee(sec.get('fee')),
+                'fee': clean_fee(sec.get('fee')),
                 'restrictions': clean_restrictions(sec.get('restrictions')),
                 'attributes': clean_other(sec.get('other')),
                 'meetings': [],
