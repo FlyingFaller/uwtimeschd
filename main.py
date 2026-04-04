@@ -10,15 +10,15 @@ if __name__ == "__main__":
     # Let's target a small, specific slice for our test
     discover_tasks(
         db_path="data/queue.db",
-        start=("AUT", 2021),
-        end=("AUT", 2021),
+        # start=("AUT", 2021),
+        # end=("AUT", 2021),
         target_majors=["aa", "meche"], # Aeronautics and Mechanical Engineering
-        invalidate=True
+        invalidate=False
     )
 
     print("\n--- 2. Starting Scraper Worker ---")
     # Pull up to 5 tasks from the queue
-    tasks = get_pending_tasks(db_path="data/queue.db", limit=5)
+    tasks = get_pending_tasks(db_path="data/queue.db", limit=50)
     
     if not tasks:
         print("No pending tasks found in the queue!")
