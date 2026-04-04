@@ -5,7 +5,7 @@ def print_schedule(courses):
     for course in courses:
         # Include the newly extracted course title here
         title_str = f" - {course['course_title']}" if course.get('course_title') else ""
-        print(f"\n{course['department']} {course['course_number']}{title_str}  {course['prerequisites'] or ''}")
+        print(f"\n{course['course_prefix']} {course['course_number']}{title_str}  {course['prerequisites'] or ''}")
         
         if course['notes']: print(f"  Course Notes: {course['notes']}")
         print("  " + "-" * 115)
