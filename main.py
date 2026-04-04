@@ -1,65 +1,72 @@
-from parse.fetch import fetch_page
-from parse.url_codes import parse_url_codes
-from parse.schedule import parse_schedule, print_schedule, parse_major_college
-from scrape.queue_manager import discover_tasks, get_pending_tasks, mark_task_status
+from management.fetch import fetch_page
+from management.queue_manager import discover_tasks, get_pending_tasks, mark_task_status
+from management.database_manager import insert_schedule_data
+from parse.schedule import parse_schedule, parse_major_college
+from parse.normalize import normalize_schedule_data
 
 if __name__ == "__main__":
     
-    # ---------------------------------------------------------
-    # Optional: Test just the new fetch function
-    # ---------------------------------------------------------
-    # target_url = "https://www.washington.edu/students/timeschd/AUT2020/me.html"
-    # status_code, html = fetch_page(target_url)
-    # print(f"Fetch Result -> Status: {status_code}, HTML Length: {len(html) if html else 0}")
-    # exit()
-    
-    # ---------------------------------------------------------
-    # 1. Testing the Task Generator
-    # ---------------------------------------------------------
-    # print("--- 1. Testing the Task Generator ---")
-    # discover_tasks(
-    #     db_path="scrape/queue.db",
-    #     start=("AUT", 2021),
-    #     end=None,
-    #     target_majors=None,
-    #     invalidate=False
-    # )
+    print("--- 1. Generating Tasks ---")
+    # Let's target a small, specific slice for our test
+    discover_tasks(
+        db_path="data/queue.db",
+        start=("AUT", 2021),
+        end=("AUT", 2021),
+        target_majors=["aa", "meche"], # Aeronautics and Mechanical Engineering
+        invalidate=False
+    )
 
-    # # ---------------------------------------------------------
-    # # 2. Testing the Scraper Worker
-    # # ---------------------------------------------------------
-    # print("\n--- 2. Testing the Scraper Worker ---")
-    # tasks = get_pending_tasks(limit=3)
+    print("\n--- 2. Starting Scraper Worker ---")
+    # Pull up to 5 tasks from the queue
+    tasks = get_pending_tasks(db_path="data/queue.db", limit=5)
     
-    # if not tasks:
-    #     print("No pending tasks found!")
+    if not tasks:
+        print("No pending tasks found in the queue!")
         
-    # for task in tasks:
-    #     url = f"https://www.washington.edu/students/timeschd/{task['quarter']}{task['year']}/{task['major']}.html"
-    #     print(f"\nWorker is scraping {url}...")
+    for task in tasks:
+        url = f"https://www.washington.edu/students/timeschd/{task['quarter']}{task['year']}/{task['major']}.html"
+        print(f"\n[WORKER] Scraping {url}...")
         
-    #     status_code, html = fetch_page(url)
+        status_code, html = fetch_page(url)
         
-    #     if status_code == 200 and html:
-    #         courses = parse_schedule(html)
-    #         print(f"Successfully parsed {len(courses)} courses.")
+        if status_code == 200 and html:
+            try:
+                # 1. Parse Metadata (Major Name & College)
+                meta = parse_major_college(html)
+                college = meta['college'] or "Unknown College"
+                major_name = meta['major'] or task['major'].upper()
+                
+                # 2. Parse Raw Schedule Data
+                raw_courses = parse_schedule(html)
+                
+                # 3. Clean and Normalize Data
+                clean_courses = normalize_schedule_data(raw_courses)
+                
+                # 4. Insert into the 3-Table Search Database
+                insert_schedule_data(
+                    quarter=task['quarter'],
+                    year=task['year'],
+                    college=college,
+                    major_name=major_name,
+                    courses=clean_courses,
+                    db_path="data/schedules.db"
+                )
+                
+                # 5. Mark Task Complete
+                mark_task_status(task['quarter'], task['year'], task['major'], "COMPLETED", db_path="data/queue.db")
+                print(f"[SUCCESS] Parsed & saved {len(clean_courses)} courses for {major_name} ({college}).")
+                
+            except Exception as e:
+                # Catch any parsing or DB insertion errors so the script doesn't crash
+                mark_task_status(task['quarter'], task['year'], task['major'], "ERROR", db_path="data/queue.db")
+                print(f"[ERROR] Failed during parsing/database insertion: {e}")
             
-    #         # Here is where you would INSERT into your `uw_schedules.db` search database!
+        elif status_code in (401, 404):
+            mark_task_status(task['quarter'], task['year'], task['major'], "HTTP_404", db_path="data/queue.db")
+            print(f"[SKIP] Page not found or locked (Status {status_code}). Marked as HTTP_404.")
             
-    #         mark_task_status(task['year'], task['quarter'], task['major'], "COMPLETED")
-    #         print(f"Marked task {task['major']} {task['quarter']} {task['year']} as COMPLETED.")
+        else:
+            mark_task_status(task['quarter'], task['year'], task['major'], "ERROR", db_path="data/queue.db")
+            print(f"[RETRY] Network issue (Status {status_code}). Marked to retry later.")
             
-    #     elif status_code == 404:
-    #         # Maybe the major was listed on the root page but the child page 404s (UW makes mistakes)
-    #         mark_task_status(task['year'], task['quarter'], task['major'], "HTTP_404")
-    #         print(f"Child page not found! Marked as HTTP_404.")
-            
-    #     else:
-    #         mark_task_status(task['year'], task['quarter'], task['major'], "ERROR")
-    #         print(f"Failed to fetch (Status: {status_code}). Marked as ERROR to retry later.")
-
-    page = "https://www.washington.edu/students/timeschd/AUT2021/aa.html"
-    code, html = fetch_page(page)
-    courses = parse_schedule(html)
-    print_schedule(courses)
-    print(courses[0:2])
+    print("\n--- Worker Finished ---")
