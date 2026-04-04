@@ -11,9 +11,9 @@ const DOM = {
     toolbar: document.getElementById('toolbar'),
     
     // Filter DOM Elements
-    filterStatus: document.getElementById('filter-status'),
     filterLevel: document.getElementById('filter-level'),
-    filterCredits: document.getElementById('filter-credits'),
+    filterCreditsMin: document.getElementById('filter-credits-min'),
+    filterCreditsMax: document.getElementById('filter-credits-max'),
     filterType: document.getElementById('filter-type'),
     filterFee: document.getElementById('filter-fee'),
     filterPrereq: document.getElementById('filter-prereq'),
@@ -78,11 +78,7 @@ function executeSearch() {
         // ------------------------------------------
         let filterConditions = "";
 
-        // 1. Status Filter
-        if (DOM.filterStatus.value === 'open') filterConditions += " AND s2.status = 'Open'";
-        if (DOM.filterStatus.value === 'closed') filterConditions += " AND s2.status != 'Open'";
-
-        // 2. Course Level Filter
+        // 1. Course Level Filter
         const levelVal = DOM.filterLevel.value;
         if (levelVal !== 'all') {
             const minLvl = parseInt(levelVal);
@@ -93,28 +89,35 @@ function executeSearch() {
             }
         }
 
-        // 3. Credits Filter
-        if (DOM.filterCredits.value === '1-2') filterConditions += " AND s2.credits_min >= 1 AND s2.credits_max <= 2";
-        if (DOM.filterCredits.value === '3-4') filterConditions += " AND s2.credits_min >= 3 AND s2.credits_max <= 4";
-        if (DOM.filterCredits.value === '5+') filterConditions += " AND s2.credits_min >= 5";
+        // 2. Exact Credits Filter (Min / Max)
+        const minCred = parseInt(DOM.filterCreditsMin.value);
+        if (!isNaN(minCred)) filterConditions += ` AND s2.credits_max >= ${minCred}`;
+        
+        const maxCred = parseInt(DOM.filterCreditsMax.value);
+        if (!isNaN(maxCred)) filterConditions += ` AND s2.credits_min <= ${maxCred}`;
 
-        // 4. Section Type Filter
-        if (DOM.filterType.value === 'lec') filterConditions += " AND (s2.section_type IS NULL OR s2.section_type = 'LC')";
-        if (DOM.filterType.value === 'qz') filterConditions += " AND s2.section_type = 'QZ'";
-        if (DOM.filterType.value === 'lb') filterConditions += " AND s2.section_type = 'LB'";
+        // 3. Section Type Filter
+        const typeVal = DOM.filterType.value;
+        if (typeVal !== 'all') {
+            if (typeVal === 'LC') {
+                filterConditions += " AND (s2.section_type IS NULL OR s2.section_type = 'LC')";
+            } else {
+                filterConditions += ` AND s2.section_type = '${typeVal}'`;
+            }
+        }
 
-        // 5. Fees Filter
+        // 4. Fees Filter
         if (DOM.filterFee.value === 'no_fee') filterConditions += " AND (s2.fee IS NULL OR s2.fee = 0)";
         if (DOM.filterFee.value === 'has_fee') filterConditions += " AND s2.fee > 0";
 
-        // 6. Prerequisites Filter
+        // 5. Prerequisites Filter
         if (DOM.filterPrereq.value === 'yes') filterConditions += " AND c2.has_prerequisites = 1";
         if (DOM.filterPrereq.value === 'no') filterConditions += " AND (c2.has_prerequisites = 0 OR c2.has_prerequisites IS NULL)";
 
-        // 7. CR/NC Filter
+        // 6. CR/NC Filter
         if (DOM.filterCrnc.value === 'crnc') filterConditions += " AND s2.is_credit_no_credit = 1";
 
-        // 8. Meeting Days Filter
+        // 7. Meeting Days Filter
         const checkedDays = Array.from(DOM.dayFilters).filter(cb => cb.checked).map(cb => cb.value);
         if (checkedDays.length > 0) {
             const daySql = checkedDays.map(day => `(',' || m2.days || ',') LIKE '%,${day},%'`).join(" OR ");
@@ -194,6 +197,14 @@ function renderResults(courseList) {
     DOM.toolbar.classList.remove('hidden');
     let html = "";
 
+    // Specific Quarter Colors mapping (using your provided hex codes)
+    const quarterColors = {
+        'AUT': { bg: '#ffcccc', text: '#660000', border: '#ff9999' },
+        'SPR': { bg: '#ccffcc', text: '#004d00', border: '#99ff99' },
+        'WIN': { bg: '#99ccff', text: '#002266', border: '#66b3ff' },
+        'SUM': { bg: '#ffffcc', text: '#4d4d00', border: '#ffff99' }
+    };
+
     courseList.forEach(course => {
         let sectionsHtml = "";
         course.sections.forEach(section => {
@@ -215,13 +226,12 @@ function renderResults(courseList) {
                     <div class="flex flex-wrap justify-between items-center mb-2 pb-2 border-b border-gray-100 gap-2">
                         <div class="font-bold flex flex-wrap items-center gap-3">
                             <span>Section ${section.section_id.split('-').pop()}</span>
-                            <span class="px-2 py-0.5 bg-gray-100 text-gray-600 text-xs rounded">${section.section_type || 'LEC'}</span>
+                            <span class="px-2 py-0.5 bg-gray-100 text-gray-600 text-xs rounded">${section.section_type || 'LC'}</span>
                             <span class="text-sm font-normal text-gray-500">SLN: ${section.sln}</span>
                             <span class="text-sm text-gray-600 font-medium ml-2">${creditsText}${feeText}${crncText}</span>
                         </div>
                         <div class="text-sm">
-                            <span class="${section.status === 'Open' ? 'text-green-600' : 'text-red-600'} font-bold">${section.status || '?'}</span>
-                            <span class="text-gray-500 ml-2">${section.enrolled} / ${section.enrollment_limit}</span>
+                            <span class="text-gray-500">${section.enrolled} / ${section.enrollment_limit}</span>
                         </div>
                     </div>
                     ${meetingsHtml}
@@ -230,14 +240,8 @@ function renderResults(courseList) {
             `;
         });
 
-        // Resolve Custom Quarter Colors
-        const qColors = {
-            'AUT': { bg: '#ffcccc', text: '#800000', border: '#ffb3b3' },
-            'SPR': { bg: '#ccffcc', text: '#006600', border: '#b3ffb3' },
-            'WIN': { bg: '#99ccff', text: '#003399', border: '#80bfff' },
-            'SUM': { bg: '#ffffcc', text: '#666600', border: '#ffffb3' }
-        };
-        const activeColor = qColors[course.quarter] || { bg: '#f3f4f6', text: '#1f2937', border: '#e5e7eb' };
+        // Resolve Color Badge
+        const activeColor = quarterColors[course.quarter] || { bg: '#f3f4f6', text: '#1f2937', border: '#e5e7eb' };
 
         html += `
             <details class="group bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
@@ -283,16 +287,17 @@ DOM.sortSel.addEventListener('change', () => {
 
 // Automatically refresh search if user changes a filter while searching
 [
-    DOM.filterStatus, 
     DOM.filterLevel, 
-    DOM.filterCredits, 
+    DOM.filterCreditsMin, 
+    DOM.filterCreditsMax, 
     DOM.filterType, 
     DOM.filterFee, 
     DOM.filterPrereq, 
     DOM.filterCrnc, 
     ...DOM.dayFilters
 ].forEach(el => {
-    el.addEventListener('change', () => {
+    // For inputs where typing occurs, we use 'input' rather than just 'change'
+    el.addEventListener(el.type === 'number' ? 'input' : 'change', () => {
         if (DOM.searchIn.value.trim().length >= 2) executeSearch();
     });
 });
