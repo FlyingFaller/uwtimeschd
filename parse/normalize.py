@@ -24,9 +24,11 @@ def normalize_schedule_data(courses: list[dict]) -> list[dict]:
         for sec in course.get('sections', []):
             credits_min, credits_max, sec_type = clean_credits(sec.get('credits'))
             enrolled, limit, is_est = clean_enrollment(sec.get('enrollment_limit'))
+            is_primary_section = (sec_type is None)
             
             cleaned_sec = {
                 'section_id'         : sec.get('section_id'),
+                'is_primary'         : is_primary_section,
                 'SLN'                : clean_int(sec.get('SLN')),
                 'section_type'       : sec_type,
                 'credits_min'        : credits_min,

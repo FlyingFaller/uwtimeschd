@@ -32,6 +32,7 @@ def init_schedule_db(db_path: str = "data/schedules.db"):
             CREATE TABLE IF NOT EXISTS sections 
             (
                 section_id              TEXT PRIMARY KEY,
+                is_primary              BOOLEAN,
                 course_id               TEXT,
                 sln                     INTEGER,
                 section_type            TEXT,
@@ -157,7 +158,8 @@ def insert_schedule_data(
                 cursor.execute("""
                     INSERT INTO sections 
                     (
-                        section_id, 
+                        section_id,
+                        is_primary, 
                         course_id, 
                         sln, 
                         section_type, 
@@ -184,9 +186,10 @@ def insert_schedule_data(
                         writing, 
                         new_course, 
                         no_financial_aid
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""", 
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""", 
                     (
-                    section_id, 
+                    section_id,
+                    s.get('is_primary'), 
                     course_id, 
                     s.get('SLN'), 
                     s.get('section_type'), 
