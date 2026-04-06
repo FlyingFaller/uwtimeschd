@@ -5,9 +5,13 @@ from parse.schedule import parse_schedule, parse_major_college
 from parse.normalize import normalize_schedule_data
 from parse.debug import print_schedule, print_dict
 
-code, html = fetch_page("https://www.washington.edu/students/timeschd/AUT2021/aa.html")
+# URL = "https://www.washington.edu/students/timeschd/WIN2021/aa.html"
+URL = "https://www.washington.edu/students/timeschd/AUT2021/aa.html"
+# URL = "https://www.washington.edu/students/timeschd/SUM2021/aa.html"
+code, html = fetch_page(URL)
 courses = parse_schedule(html)
 # print_schedule(courses)
-print_dict(courses[4])
+# print_dict(courses[4]['sections'][0])
 clean_courses = normalize_schedule_data(courses)
-print_dict(clean_courses[4])
+print_dict(clean_courses[0])
+# print_schedule(courses)

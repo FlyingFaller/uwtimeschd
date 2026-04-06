@@ -77,18 +77,18 @@ def get_column_boundaries(clean_text, pad_left=1, pad_right=1):
         if 'Restr' in line and 'SLN' in line and 'Cred' in line:
             
             found_indices = [
-                ('restr', 0),
-                ('sln', max(0, line.find('SLN') - pad_left)),
-                ('id', max(0, line.find('ID') - pad_left)),
-                ('cred', max(0, line.find('Cred') - pad_left)),
-                ('times', max(0, safe_find(line, 'Meeting Times', 'Times') - pad_left)),
-                ('bldg_room', max(0, safe_find(line, 'Bldg Room', 'Bldg') - pad_left)),
+                ('restr',      0),
+                ('sln',        max(0, line.find('SLN') - pad_left)),
+                ('id',         max(0, line.find('ID') - pad_left)),
+                ('cred',       max(0, line.find('Cred') - pad_left)),
+                ('times',      max(0, safe_find(line, 'Meeting Times', 'Times') - pad_left)),
+                ('bldg_room',  max(0, safe_find(line, 'Bldg Room', 'Bldg') - pad_left)),
                 ('instructor', max(0, line.find('Instructor') - pad_left)),
-                ('status', max(0, line.find('Status') - pad_left)),
-                ('enrl', max(0, line.find('Enrl') - pad_left)),
-                ('grades', max(0, line.find('Grades') - pad_left)),
-                ('fee', max(0, line.find('Fee') - pad_left)),
-                ('other', max(0, line.find('Other') - pad_left))
+                ('status',     max(0, line.find('Status') - pad_left)),
+                ('enrl',       max(0, line.find('Enrl') - pad_left)),
+                ('grades',     max(0, line.find('Grades') - pad_left)),
+                ('fee',        max(0, line.find('Fee') - pad_left)),
+                ('other',      max(0, line.find('Other') - pad_left))
             ]
             
             valid_indices = [(name, idx) for name, idx in found_indices if idx > 0 or name == 'restr']
@@ -107,87 +107,78 @@ def get_column_boundaries(clean_text, pad_left=1, pad_right=1):
             return boundaries
             
     return {
-        'restr': (0, 6), 'sln': (6, 11), 'id': (11, 15), 'cred': (15, 21),
-        'times': (21, 40), 'bldg_room': (40, 52), 'instructor': (52, 75),
-        'status': (75, 83), 'enrl': (83, 93), 'grades': (93, 100),
-        'fee': (100, 106), 'other': (106, None)
+        'restr' : (0, 6),     'sln'      : (6, 11),  'id'        : (11, 15),  'cred': (15, 21),
+        'times' : (21, 40),   'bldg_room': (40, 52), 'instructor': (52, 75),
+        'status': (75, 83),   'enrl'     : (83, 93), 'grades'    : (93, 100),
+        'fee'   : (100, 106), 'other'    : (106, None)
     }
 
 # --- Extraction Subroutines (Returning Primitives) ---
 
 def extract_restrictions(chunk):
-    match = re.search(r'^[^0-9]+', chunk)
+    match = re.search(r'^([^0-9]+)', chunk)
     if match:
-        res = match.group(0).strip()
+        res = match.group(1).strip()
         return res if res else None
     return None
 
 def extract_sln(chunk):
-    match = re.search(r'\d{4,5}', chunk)
-    return match.group(0) if match else None
+    match = re.search(r'(?:^|\s+)(\d{4,5})(?:\s+|$)', chunk)
+    return match.group(1) if match else None
 
 def extract_section_id(chunk):
-    match = re.search(r'[A-Z0-9]{1,3}', chunk)
-    return match.group(0) if match else None
+    # Enforces that the 1-3 character ID is its own distinct "word" in the chunk
+    match = re.search(r'(?:^|\s+)([A-Z0-9]{1,3})(?:\s+|$)', chunk)
+    return match.group(1) if match else None
 
 def extract_credits(chunk):
-    match = re.search(r'[\d\.\-/]+|VAR|[A-Z]{2}', chunk)
-    return match.group(0) if match else None
+    match = re.search(r'(?:^|\s+)([\d\.\-/]+|VAR|[A-Z]{2})(?:\s+|$)', chunk)
+    return match.group(1) if match else None
 
 def extract_times(chunk):
-    cleaned = chunk.strip()
-    if not cleaned:
-        return None
-    # Anchored to the start so it doesn't accidentally trigger on "TBA" hidden inside a text note
-    match = re.search(r'^(to be arranged|TBA|[a-zA-Z]+\s+\d{1,4}[-:]\d{1,4})', cleaned)
-    return match.group(0) if match else None
+    # The Gap Anchor replaces the strict `^` anchor
+    match = re.search(r'(?:^|\s+)(to be arranged|TBA|[a-zA-Z]+\s+\d{1,4}[-:]\d{1,4})', chunk)
+    return match.group(1) if match else None
 
 def extract_building_room(chunk):
-    cleaned = chunk.strip()
-    if not cleaned:
-        return None
-    
-    if cleaned.startswith("TBA"):
+    if "TBA" in chunk:
         return "TBA"
         
-    # Strictly requires the room portion to contain a digit or be an asterisk.
-    # Prevents chunks of ALL CAPS text notes (like "D EVERY") from being misidentified as buildings!
-    match = re.search(r'^([A-Z\*][A-Z0-9\*]{0,3})\s+([A-Z]*\d+[A-Z]*|\*)', cleaned)
+    # Group 1 captures the Building, Group 2 captures the Room. 
+    # Protected from bleed-over by the leading gap anchor.
+    match = re.search(r'(?:^|\s+)([A-Z\*][A-Z0-9\*]{0,3})\s+([A-Z]*\d+[A-Z]*|\*)', chunk)
     if match:
         return f"{match.group(1)} {match.group(2)}"
         
     return None
 
 def extract_instructor(chunk):
-    cleaned = chunk.strip()
+    # Instructors naturally contain spaces and commas. 
+    # Best to strip stray digits (from building/room bleed) from the left edge.
+    cleaned = re.sub(r'^[\d\s\*]+', '', chunk).strip()
     return cleaned if cleaned else None
 
 def extract_status(chunk):
-    match = re.search(r'[A-Za-z]{3,10}', chunk)
-    return match.group(0) if match else None
+    match = re.search(r'(?:^|\s+)([A-Za-z]{3,10})(?:\s+|$)', chunk)
+    return match.group(1) if match else None
 
 def extract_enrollment(chunk):
-    match = re.search(r'\d+\s*/\s*\d+[a-zA-Z]?', chunk)
-    return match.group(0) if match else None
+    match = re.search(r'(?:^|\s+)(\d+\s*/\s*\d+[a-zA-Z]?)(?:\s+|$)', chunk)
+    return match.group(1) if match else None
 
 def extract_grades(chunk):
-    match = re.search(r'[A-Z/]+', chunk)
-    return match.group(0) if match else None
+    match = re.search(r'(?:^|\s+)([A-Z/]+)(?:\s+|$)', chunk)
+    return match.group(1) if match else None
 
 def extract_fee(chunk):
-    match = re.search(r'\$\d+', chunk)
-    return match.group(0) if match else None
+    match = re.search(r'(?:^|\s+)(\$\d+)(?:\s+|$)', chunk)
+    return match.group(1) if match else None
 
 def extract_other(chunk):
-    cleaned = chunk.strip()
-    if not cleaned:
-        return None
-        
-    match = re.match(r'^[ABOEHJRSW%#\s]+', cleaned)
-    if match:
-        result = match.group(0).strip()
-        return result if result else None
-    return None
+    # The Gap Anchor ensures it skips over the trailing digits from the Fee column
+    # Notice we capture group 1, omitting the need to match `\s` inside the character class
+    match = re.search(r'(?:^|\s+)([ABOEHJRSW%#]+)(?:\s+|$)', chunk)
+    return match.group(1) if match else None
 
 def extract_notes(table):
     notes = []
