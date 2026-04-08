@@ -165,12 +165,19 @@ def get_pending_tasks(db_path: str = "data/queue.db", limit: int = 50):
     with sqlite3.connect(db_path) as conn:
         conn.row_factory = sqlite3.Row # Returns dict-like rows
         cursor = conn.cursor()
-        cursor.execute("""
-            SELECT quarter, year, major 
-            FROM child_log 
-            WHERE status = 'PENDING' 
-            LIMIT ?
-        """, (limit,))
+        if limit is None:
+            cursor.execute("""
+                SELECT quarter, year, major 
+                FROM child_log 
+                WHERE status = 'PENDING' 
+            """)
+        else:
+            cursor.execute("""
+                SELECT quarter, year, major 
+                FROM child_log 
+                WHERE status = 'PENDING' 
+                LIMIT ?
+            """, (limit,))
         return [dict(row) for row in cursor.fetchall()]
 
 def mark_task_status(quarter: str, year: int, major: str, status: str, db_path: str = "data/queue.db"):
