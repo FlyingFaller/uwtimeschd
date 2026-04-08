@@ -1,0 +1,590 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>UW Time Schedule - Command Center</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        /* Custom scrollbar for data density feel */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+        
+        /* Stop table headers from sticking out weirdly */
+        th { position: sticky; top: 0; background-color: #f8fafc; z-index: 10; }
+
+        /* Hide default details triangle */
+        details > summary { list-style: none; }
+        details > summary::-webkit-details-marker { display: none; }
+        
+        /* Smooth accordion opening */
+        details[open] summary ~ * { animation: slideDown 0.2s ease-in-out; }
+        @keyframes slideDown { 0% { opacity: 0; transform: translateY(-5px); } 100% { opacity: 1; transform: translateY(0); } }
+    </style>
+</head>
+<body class="bg-slate-200 text-slate-800 font-sans h-screen flex overflow-hidden">
+
+    <!-- ========================================== -->
+    <!-- LEFT SIDEBAR: CONTROL PANEL                -->
+    <!-- ========================================== -->
+    <aside class="w-80 bg-white border-r border-slate-300 flex flex-col h-full shadow-lg z-20 shrink-0">
+        <!-- Logo / Header -->
+        <div class="p-5 border-b border-slate-200 bg-slate-50 flex items-center gap-3">
+            <div class="bg-purple-700 text-white p-2 rounded flex items-center justify-center">
+                <i data-lucide="library" class="w-5 h-5"></i>
+            </div>
+            <div>
+                <h1 class="text-sm font-bold tracking-tight text-slate-900 uppercase">UW Time Schedule</h1>
+                <p class="text-[11px] text-slate-500 font-bold uppercase tracking-wider">Advanced Search</p>
+            </div>
+        </div>
+
+        <!-- Filters Scroll Area -->
+        <div class="flex-1 overflow-y-auto p-5 space-y-6">
+            
+            <!-- Category: Department & Course -->
+            <div>
+                <h2 class="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest mb-3">Department & Course</h2>
+                <div class="space-y-4">
+                    
+                    <!-- Searchable Majors List -->
+                    <div>
+                        <div class="flex justify-between items-end mb-1">
+                            <label class="text-xs font-semibold text-slate-700">Majors / Departments</label>
+                            <button class="text-[10px] text-purple-600 hover:underline">Clear</button>
+                        </div>
+                        <div class="relative mb-2">
+                            <input type="text" placeholder="Filter majors..." class="w-full text-xs border border-slate-300 rounded p-1.5 pl-7 focus:ring-2 focus:ring-purple-500 outline-none">
+                            <i data-lucide="search" class="w-3.5 h-3.5 text-slate-400 absolute left-2 top-2"></i>
+                        </div>
+                        <div class="max-h-36 overflow-y-auto space-y-1 text-xs text-slate-700 border border-slate-200 p-1.5 rounded bg-slate-50 shadow-inner">
+                            <label class="flex items-center gap-2 cursor-pointer hover:bg-slate-200 p-1 rounded transition-colors"><input type="checkbox" class="accent-purple-600" checked> All Departments</label>
+                            <label class="flex items-center gap-2 cursor-pointer hover:bg-slate-200 p-1 rounded transition-colors"><input type="checkbox" class="accent-purple-600"> AA - Aeronautics & Astronautics</label>
+                            <label class="flex items-center gap-2 cursor-pointer hover:bg-slate-200 p-1 rounded transition-colors"><input type="checkbox" class="accent-purple-600"> BIO - Biology</label>
+                            <label class="flex items-center gap-2 cursor-pointer hover:bg-slate-200 p-1 rounded transition-colors"><input type="checkbox" class="accent-purple-600"> CHEM - Chemistry</label>
+                            <label class="flex items-center gap-2 cursor-pointer hover:bg-slate-200 p-1 rounded transition-colors"><input type="checkbox" class="accent-purple-600"> CSE - Computer Science</label>
+                            <label class="flex items-center gap-2 cursor-pointer hover:bg-slate-200 p-1 rounded transition-colors"><input type="checkbox" class="accent-purple-600"> ENGL - English</label>
+                            <label class="flex items-center gap-2 cursor-pointer hover:bg-slate-200 p-1 rounded transition-colors"><input type="checkbox" class="accent-purple-600"> MATH - Mathematics</label>
+                            <label class="flex items-center gap-2 cursor-pointer hover:bg-slate-200 p-1 rounded transition-colors"><input type="checkbox" class="accent-purple-600"> ME - Mechanical Engineering</label>
+                            <label class="flex items-center gap-2 cursor-pointer hover:bg-slate-200 p-1 rounded transition-colors"><input type="checkbox" class="accent-purple-600"> PHYS - Physics</label>
+                        </div>
+                    </div>
+
+                    <!-- Course Level -->
+                    <div>
+                        <label class="text-xs font-semibold text-slate-700 mb-1 block">Course Level</label>
+                        <div class="grid grid-cols-5 gap-1">
+                            <button class="py-1 text-[11px] border border-slate-300 rounded hover:bg-slate-50 font-medium filter-btn">100</button>
+                            <button class="py-1 text-[11px] border border-purple-300 bg-purple-50 text-purple-700 rounded font-medium filter-btn active">200</button>
+                            <button class="py-1 text-[11px] border border-slate-300 rounded hover:bg-slate-50 font-medium filter-btn">300</button>
+                            <button class="py-1 text-[11px] border border-slate-300 rounded hover:bg-slate-50 font-medium filter-btn">400</button>
+                            <button class="py-1 text-[11px] border border-slate-300 rounded hover:bg-slate-50 font-medium filter-btn">500+</button>
+                        </div>
+                    </div>
+
+                    <!-- Credits -->
+                    <div class="flex gap-2">
+                        <div class="flex-1">
+                            <label class="text-[10px] font-semibold text-slate-500 uppercase">Min Credits</label>
+                            <input type="number" placeholder="0" class="w-full text-xs border border-slate-300 rounded p-1.5 outline-none focus:ring-1 focus:ring-purple-500">
+                        </div>
+                        <div class="flex-1">
+                            <label class="text-[10px] font-semibold text-slate-500 uppercase">Max Credits</label>
+                            <input type="number" placeholder="30" class="w-full text-xs border border-slate-300 rounded p-1.5 outline-none focus:ring-1 focus:ring-purple-500">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <hr class="border-slate-200">
+
+            <!-- Category: Schedule & Time -->
+            <div>
+                <h2 class="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest mb-3">Schedule & Time</h2>
+                
+                <div class="space-y-4">
+                    
+                    <!-- Apply To Scope -->
+                    <div class="bg-indigo-50 border border-indigo-100 p-2 rounded flex justify-between items-center">
+                        <label class="text-[10px] font-bold text-indigo-800 uppercase tracking-wide">Apply Time Limits To:</label>
+                        <select class="text-[10px] border border-indigo-200 rounded p-1 outline-none bg-white font-bold text-indigo-700 shadow-sm cursor-pointer">
+                            <option>Primary Sections Only</option>
+                            <option>All Sections</option>
+                        </select>
+                    </div>
+
+                    <!-- Days -->
+                    <div>
+                        <div class="flex justify-between items-center mb-1">
+                            <label class="text-xs font-semibold text-slate-700">Meeting Days</label>
+                            <!-- Segmented Control for Include/Exclude -->
+                            <div class="flex bg-slate-100 rounded p-0.5 border border-slate-200">
+                                <button class="text-[10px] px-2 py-0.5 bg-white shadow-sm rounded font-bold text-slate-700">Include</button>
+                                <button class="text-[10px] px-2 py-0.5 text-slate-500 font-medium hover:text-slate-700">Exclude</button>
+                            </div>
+                        </div>
+                        <div class="flex gap-1">
+                            <button class="flex-1 py-1 text-xs border border-slate-300 rounded hover:bg-slate-50 font-medium filter-btn">M</button>
+                            <button class="flex-1 py-1 text-xs border border-slate-300 rounded hover:bg-slate-50 font-medium filter-btn">T</button>
+                            <button class="flex-1 py-1 text-xs border border-purple-300 bg-purple-50 text-purple-700 rounded font-medium filter-btn active">W</button>
+                            <button class="flex-1 py-1 text-xs border border-slate-300 rounded hover:bg-slate-50 font-medium filter-btn">Th</button>
+                            <button class="flex-1 py-1 text-xs border border-purple-300 bg-purple-50 text-purple-700 rounded font-medium filter-btn active">F</button>
+                        </div>
+                    </div>
+
+                    <!-- Time Bounds -->
+                    <div class="flex gap-2">
+                        <div class="flex-1">
+                            <label class="text-[10px] font-semibold text-slate-500 uppercase">Starts After</label>
+                            <input type="time" class="w-full text-xs border border-slate-300 rounded p-1.5 outline-none focus:ring-1 focus:ring-purple-500">
+                        </div>
+                        <div class="flex-1">
+                            <label class="text-[10px] font-semibold text-slate-500 uppercase">Ends Before</label>
+                            <input type="time" class="w-full text-xs border border-slate-300 rounded p-1.5 outline-none focus:ring-1 focus:ring-purple-500">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <hr class="border-slate-200">
+
+            <!-- Category: Section Types -->
+            <div>
+                <h2 class="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest mb-3">Section Types</h2>
+                <div class="grid grid-cols-2 gap-y-2 gap-x-1 text-xs text-slate-700">
+                    <label class="flex items-center gap-2 cursor-pointer hover:bg-slate-50 p-1 -ml-1 rounded"><input type="checkbox" class="accent-purple-600"> Lecture (LC)</label>
+                    <label class="flex items-center gap-2 cursor-pointer hover:bg-slate-50 p-1 -ml-1 rounded"><input type="checkbox" class="accent-purple-600"> Quiz (QZ)</label>
+                    <label class="flex items-center gap-2 cursor-pointer hover:bg-slate-50 p-1 -ml-1 rounded"><input type="checkbox" class="accent-purple-600"> Lab (LB)</label>
+                    <label class="flex items-center gap-2 cursor-pointer hover:bg-slate-50 p-1 -ml-1 rounded"><input type="checkbox" class="accent-purple-600"> Seminar (SM)</label>
+                    <label class="flex items-center gap-2 cursor-pointer hover:bg-slate-50 p-1 -ml-1 rounded"><input type="checkbox" class="accent-purple-600"> Studio (ST)</label>
+                    <label class="flex items-center gap-2 cursor-pointer hover:bg-slate-50 p-1 -ml-1 rounded"><input type="checkbox" class="accent-purple-600"> Practicum (PR)</label>
+                    <label class="flex items-center gap-2 cursor-pointer hover:bg-slate-50 p-1 -ml-1 rounded"><input type="checkbox" class="accent-purple-600"> Clinic (CL)</label>
+                    <label class="flex items-center gap-2 cursor-pointer hover:bg-slate-50 p-1 -ml-1 rounded"><input type="checkbox" class="accent-purple-600"> Clerkship (CK)</label>
+                    <label class="flex items-center gap-2 cursor-pointer hover:bg-slate-50 p-1 -ml-1 rounded"><input type="checkbox" class="accent-purple-600"> Conference (CO)</label>
+                    <label class="flex items-center gap-2 cursor-pointer hover:bg-slate-50 p-1 -ml-1 rounded"><input type="checkbox" class="accent-purple-600"> Ind. Study (IS)</label>
+                </div>
+            </div>
+
+            <hr class="border-slate-200">
+
+            <!-- Category: Attributes & Grading -->
+            <div>
+                <h2 class="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest mb-3">Attributes & Grading</h2>
+                
+                <div class="flex flex-wrap gap-2 mb-4">
+                    <!-- Registration & Cost -->
+                    <button class="filter-chip px-2 py-1 text-[10px] uppercase tracking-wide border border-slate-300 rounded-full hover:bg-slate-100 font-bold text-slate-600 bg-white shadow-sm" title="Has Registration Restrictions">Restricted</button>
+                    <button class="filter-chip px-2 py-1 text-[10px] uppercase tracking-wide border border-slate-300 rounded-full hover:bg-slate-100 font-bold text-slate-600 bg-white shadow-sm" title="Add Code Required">Add Code (&gt;)</button>
+                    <button class="filter-chip px-2 py-1 text-[10px] uppercase tracking-wide border border-slate-300 rounded-full hover:bg-slate-100 font-bold text-slate-600 bg-white shadow-sm" title="Credit / No Credit Only">CR/NC Only</button>
+                    <button class="filter-chip px-2 py-1 text-[10px] uppercase tracking-wide border border-slate-300 rounded-full hover:bg-slate-100 font-bold text-slate-600 bg-white shadow-sm">No Extra Fees</button>
+                    <button class="filter-chip px-2 py-1 text-[10px] uppercase tracking-wide border border-slate-300 rounded-full hover:bg-slate-100 font-bold text-slate-600 bg-white shadow-sm" title="Not eligible for Financial Aid">No FinAid (#)</button>
+
+                    <!-- Course Characteristics -->
+                    <button class="filter-chip px-2 py-1 text-[10px] uppercase tracking-wide border border-slate-300 rounded-full hover:bg-slate-100 font-bold text-slate-600 bg-white shadow-sm">Writing (W)</button>
+                    <button class="filter-chip px-2 py-1 text-[10px] uppercase tracking-wide border border-slate-300 rounded-full hover:bg-slate-100 font-bold text-slate-600 bg-white shadow-sm">Honors (H)</button>
+                    <button class="filter-chip px-2 py-1 text-[10px] uppercase tracking-wide border border-slate-300 rounded-full hover:bg-slate-100 font-bold text-slate-600 bg-white shadow-sm">Jointly Offered (J)</button>
+                    <button class="filter-chip px-2 py-1 text-[10px] uppercase tracking-wide border border-slate-300 rounded-full hover:bg-slate-100 font-bold text-slate-600 bg-white shadow-sm">New Course (%)</button>
+
+                    <!-- Delivery & Type -->
+                    <button class="filter-chip px-2 py-1 text-[10px] uppercase tracking-wide border border-slate-300 rounded-full hover:bg-slate-100 font-bold text-slate-600 bg-white shadow-sm">Online (O)</button>
+                    <button class="filter-chip px-2 py-1 text-[10px] uppercase tracking-wide border border-slate-300 rounded-full hover:bg-slate-100 font-bold text-slate-600 bg-white shadow-sm">Async (A)</button>
+                    <button class="filter-chip px-2 py-1 text-[10px] uppercase tracking-wide border border-slate-300 rounded-full hover:bg-slate-100 font-bold text-slate-600 bg-white shadow-sm">Hybrid (B)</button>
+                    <button class="filter-chip px-2 py-1 text-[10px] uppercase tracking-wide border border-slate-300 rounded-full hover:bg-slate-100 font-bold text-slate-600 bg-white shadow-sm">Community (E)</button>
+                    <button class="filter-chip px-2 py-1 text-[10px] uppercase tracking-wide border border-slate-300 rounded-full hover:bg-slate-100 font-bold text-slate-600 bg-white shadow-sm">Service (S)</button>
+                    <button class="filter-chip px-2 py-1 text-[10px] uppercase tracking-wide border border-slate-300 rounded-full hover:bg-slate-100 font-bold text-slate-600 bg-white shadow-sm">Research (R)</button>
+                </div>
+            </div>
+
+        </div>
+    </aside>
+
+    <!-- ========================================== -->
+    <!-- MAIN CONTENT AREA                          -->
+    <!-- ========================================== -->
+    <main class="flex-1 flex flex-col min-w-0 bg-slate-100">
+        
+        <!-- Top Bar (Search & Controls) -->
+        <header class="bg-white border-b border-slate-300 shadow-sm z-10 shrink-0">
+            <div class="p-4 flex flex-col gap-3 max-w-6xl mx-auto w-full">
+                
+                <!-- Unified Search Box with Search Button -->
+                <div class="flex gap-2 w-full">
+                    <div class="relative flex-1">
+                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <i data-lucide="search" class="text-slate-400 w-5 h-5"></i>
+                        </div>
+                        <input 
+                            type="text" 
+                            id="omni-search"
+                            placeholder="Search prefix, course number, title, instructor, building, or SLN... (e.g. AA 210, Hurlen)" 
+                            class="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-300 rounded-lg shadow-inner text-sm focus:bg-white focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none transition-all"
+                        >
+                        <div class="absolute inset-y-0 right-0 pr-3 flex items-center">
+                            <kbd class="hidden sm:inline-block border border-slate-200 rounded px-2 py-0.5 text-xs font-sans text-slate-400 bg-white">Ctrl K</kbd>
+                        </div>
+                    </div>
+                    <!-- Smart Search Button -->
+                    <button 
+                        id="search-btn" 
+                        class="px-5 py-2.5 rounded-lg text-sm font-bold transition-all bg-slate-300 text-slate-500 cursor-not-allowed shrink-0" 
+                        disabled
+                    >
+                        Search
+                    </button>
+                </div>
+
+                <!-- Sort & Controls Row -->
+                <div class="flex items-center justify-between">
+                    <div class="text-sm text-slate-500">
+                        <span id="result-count" class="font-extrabold text-slate-800">0</span> courses found
+                    </div>
+                    
+                    <div class="flex items-center gap-3">
+                        <div class="flex gap-2 mr-2">
+                            <button onclick="toggleAll(true)" class="text-[11px] font-bold text-purple-700 hover:bg-purple-50 border border-transparent hover:border-purple-200 px-2 py-1 rounded transition-colors">Expand All</button>
+                            <button onclick="toggleAll(false)" class="text-[11px] font-bold text-slate-500 hover:bg-slate-200 border border-transparent hover:border-slate-300 px-2 py-1 rounded transition-colors">Collapse All</button>
+                        </div>
+                        
+                        <select class="text-xs border border-slate-300 rounded p-1.5 outline-none bg-white font-bold text-slate-700 cursor-pointer shadow-sm">
+                            <option>Sort: Course (A-Z)</option>
+                            <option>Sort: Newest First</option>
+                            <option>Sort: Credits (High to Low)</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- Results Scroll Area -->
+        <div class="flex-1 overflow-y-auto p-4 md:p-6 relative">
+            <div id="results-container" class="max-w-6xl mx-auto space-y-4">
+                <!-- Courses injected here via JS -->
+            </div>
+        </div>
+
+    </main>
+
+    <!-- ========================================== -->
+    <!-- JAVASCRIPT & MOCK DATA                     -->
+    <!-- ========================================== -->
+    <script>
+        lucide.createIcons();
+
+        // Utility: Toggle all <details> elements
+        window.toggleAll = (expand) => {
+            document.querySelectorAll('details.course-card').forEach(detail => detail.open = expand);
+        };
+
+        // Utility: Toggle UI visual state for button-based filters
+        document.querySelectorAll('.filter-btn, .filter-chip').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.target.classList.toggle('active');
+                
+                if (e.target.classList.contains('active')) {
+                    e.target.classList.remove('border-slate-300', 'text-slate-600', 'bg-white', 'hover:bg-slate-50', 'hover:bg-slate-100');
+                    e.target.classList.add('border-purple-300', 'bg-purple-50', 'text-purple-700');
+                } else {
+                    e.target.classList.add('border-slate-300', 'text-slate-600', 'bg-white');
+                    e.target.classList.remove('border-purple-300', 'bg-purple-50', 'text-purple-700');
+                    if (e.target.classList.contains('filter-chip')) e.target.classList.add('hover:bg-slate-100');
+                    if (e.target.classList.contains('filter-btn')) e.target.classList.add('hover:bg-slate-50');
+                }
+            });
+        });
+
+        // Utility: Assign color classes based on the quarter
+        const getQuarterColorClasses = (quarterStr) => {
+            const upper = quarterStr.toUpperCase();
+            if (upper.includes("AUT")) return "bg-orange-100 text-orange-800 border-orange-200";
+            if (upper.includes("WIN")) return "bg-sky-100 text-sky-800 border-sky-200";
+            if (upper.includes("SPR")) return "bg-emerald-100 text-emerald-800 border-emerald-200";
+            if (upper.includes("SUM")) return "bg-amber-100 text-amber-800 border-amber-200";
+            return "bg-slate-100 text-slate-800 border-slate-200";
+        };
+
+        // Title Mapping for tooltips
+        const typeTitles = {
+            'LC': 'Lecture', 'QZ': 'Quiz', 'LB': 'Lab', 'SM': 'Seminar',
+            'ST': 'Studio', 'PR': 'Practicum', 'CL': 'Clinic', 'CK': 'Clerkship',
+            'CO': 'Conference', 'IS': 'Independent Study'
+        };
+
+        // 1. Mock Normalized Data
+        // Includes A A 299 showing a section with BOTH Restr and AddCode
+        const mockCourses = [
+            {
+                prefix: "A A", number: "210", title: "Engineering Statics", quarter: "AUT 2021",
+                notes: "FORMERLY ENGR 210",
+                sections: [
+                    { sln: "10001", id: "A", isPrimary: true, type: "LC", cred: "4", enrl: "187", limit: "210", notes: "A A 210 IS OFFERED EVERY QUARTER...", restr: true, addCode: false, other: [], fee: null,
+                      meetings: [{ days: "MWF", time: "11:30-12:20", bldg: "KNE 110", instructor: "Hurlen, E" }] },
+                    { sln: "10002", id: "AA", isPrimary: false, type: "QZ", cred: "", enrl: "26", limit: "35", notes: "", restr: false, addCode: false, other: [], fee: null,
+                      meetings: [{ days: "W", time: "14:30-16:20", bldg: "MGH 228", instructor: "Hurlen, E" }] },
+                    { sln: "10003", id: "AB", isPrimary: false, type: "QZ", cred: "", enrl: "29", limit: "35", notes: "", restr: false, addCode: false, other: [], fee: null,
+                      meetings: [{ days: "Th", time: "08:30-10:20", bldg: "MGH 254", instructor: "Hurlen, E" }] }
+                ]
+            },
+            {
+                prefix: "A A", number: "320", title: "Aerospace Instrumentation", quarter: "AUT 2021",
+                notes: "",
+                sections: [
+                    { sln: "10017", id: "A", isPrimary: true, type: "LC", cred: "3", enrl: "73", limit: "74", notes: "", restr: true, addCode: false, other: ['W'], fee: 15,
+                      meetings: [
+                          { days: "TTh", time: "09:30-10:20", bldg: "THO 125", instructor: "Hurlen, E" },
+                          { days: "F", time: "09:30-10:20", bldg: "AERB 117", instructor: "Staff" } // Example of stacked meetings
+                      ]
+                    }
+                ]
+            },
+            {
+                prefix: "A A", number: "299", title: "Undergrad Research", quarter: "AUT 2021",
+                notes: "",
+                sections: [
+                    { sln: "10008", id: "A", isPrimary: true, type: "IS", cred: "1-5", enrl: "5", limit: "25", notes: "A A 299 PROPOSAL FORM REQUIRED.", restr: true, addCode: true, crnc: true, other: [], fee: null,
+                      meetings: [{ days: "TBA", time: "", bldg: "TBA", instructor: "Staff" }] }, // Example of Both Restricted & Add Code
+                    { sln: "10009", id: "B", isPrimary: true, type: "IS", cred: "1", enrl: "25", limit: "50", notes: "DESIGN, BUILD, FLY (DBF)", restr: false, addCode: true, crnc: true, other: [], fee: null,
+                      meetings: [{ days: "TBA", time: "", bldg: "TBA", instructor: "Dabiri, D" }] }
+                ]
+            }
+        ];
+
+        // 2. Render Function
+        function renderCourses(courses) {
+            const container = document.getElementById('results-container');
+            document.getElementById('result-count').innerText = courses.length;
+
+            if (courses.length === 0) {
+                container.innerHTML = `
+                    <div class="text-center py-20">
+                        <i data-lucide="search-x" class="w-12 h-12 text-slate-300 mx-auto mb-3"></i>
+                        <h3 class="text-lg font-medium text-slate-900">No courses found</h3>
+                        <p class="text-slate-500 text-sm mt-1">Try adjusting your filters or search terms.</p>
+                    </div>`;
+                lucide.createIcons();
+                return;
+            }
+
+            let html = '';
+            courses.forEach(course => {
+                
+                // Build Section Rows
+                let sectionRowsHtml = '';
+                course.sections.forEach(sec => {
+                    
+                    let typeColor = sec.type === 'LC' ? 'bg-blue-100 text-blue-800' : (sec.type === 'QZ' ? 'bg-orange-100 text-orange-800' : (sec.type === 'IS' ? 'bg-purple-100 text-purple-800' : 'bg-slate-100 text-slate-800'));
+                    let typeTooltip = typeTitles[sec.type] || sec.type;
+                    
+                    // Primary Section styling (Subtle background, darker text for ID)
+                    let rowBgClass = sec.isPrimary ? 'bg-slate-50 hover:bg-slate-100' : 'bg-white hover:bg-slate-50';
+                    let idTextClass = sec.isPrimary ? 'text-slate-600' : 'text-slate-400';
+                    
+                    // Stacked Meetings HTML
+                    let daysHtml = `<div class="space-y-1">` + sec.meetings.map(m => `<div>${m.days}</div>`).join('') + `</div>`;
+                    let timeHtml = `<div class="space-y-1">` + sec.meetings.map(m => `<div>${m.time || '-'}</div>`).join('') + `</div>`;
+                    let bldgHtml = `<div class="space-y-1">` + sec.meetings.map(m => `<div>${m.bldg}</div>`).join('') + `</div>`;
+                    let instHtml = `<div class="space-y-1">` + sec.meetings.map(m => `<div class="truncate max-w-[110px]" title="${m.instructor}">${m.instructor}</div>`).join('') + `</div>`;
+
+                    // Intuitive Details Translation (Restr and AddCode handled via icons)
+                    let detailsHtml = '';
+                    const detailBaseClass = "inline-block px-1.5 py-0.5 mr-1 mb-1 border rounded-[4px] text-[9px] font-bold uppercase tracking-wider cursor-help";
+                    
+                    if (sec.crnc) detailsHtml += `<span class="${detailBaseClass} bg-slate-100 text-slate-600 border-slate-300" title="Credit / No Credit Only">CR/NC</span>`;
+                    if (sec.fee) detailsHtml += `<span class="${detailBaseClass} bg-green-50 text-green-700 border-green-200" title="Extra Course Fee">Fee: $${sec.fee}</span>`;
+                    
+                    if (sec.other && sec.other.length > 0) {
+                        sec.other.forEach(code => {
+                            let label = code;
+                            let styles = "bg-slate-50 text-slate-700 border-slate-200"; // Fallback
+                            let tooltip = "";
+                            
+                            switch(code) {
+                                case 'W': label = 'Writing'; tooltip = "Writing Section"; styles = "bg-indigo-50 text-indigo-700 border-indigo-200"; break;
+                                case 'H': label = 'Honors'; tooltip = "Honors Section"; styles = "bg-fuchsia-50 text-fuchsia-700 border-fuchsia-200"; break;
+                                case 'J': label = 'Jointly Offered'; tooltip = "Jointly Offered"; styles = "bg-teal-50 text-teal-700 border-teal-200"; break;
+                                case 'O': label = 'Online'; tooltip = "Online Only"; styles = "bg-sky-50 text-sky-700 border-sky-200"; break;
+                                case 'A': label = 'Async'; tooltip = "Asynchronous Online"; styles = "bg-sky-50 text-sky-700 border-sky-200"; break;
+                                case 'B': label = 'Hybrid'; tooltip = "Hybrid"; styles = "bg-sky-50 text-sky-700 border-sky-200"; break;
+                                case 'E': label = 'Community Engaged'; tooltip = "Community Engaged Learning"; styles = "bg-emerald-50 text-emerald-700 border-emerald-200"; break;
+                                case 'S': label = 'Service Learning'; tooltip = "Service Learning"; styles = "bg-emerald-50 text-emerald-700 border-emerald-200"; break;
+                                case 'R': label = 'Research'; tooltip = "Research Section"; styles = "bg-blue-50 text-blue-700 border-blue-200"; break;
+                                case '%': label = 'New Course'; tooltip = "New Course"; styles = "bg-lime-50 text-lime-700 border-lime-200"; break;
+                                case '#': label = 'No FinAid'; tooltip = "Not eligible for Financial Aid"; styles = "bg-red-50 text-red-700 border-red-200"; break;
+                            }
+                            detailsHtml += `<span class="${detailBaseClass} ${styles}" title="${tooltip}">${label}</span>`;
+                        });
+                    }
+
+                    // Row Construction (Lock and Key wrapped in span for tooltips to work with Lucide)
+                    sectionRowsHtml += `
+                        <tr class="border-b border-slate-100 ${rowBgClass} transition-colors">
+                            <td class="py-2.5 px-3 font-mono text-xs text-slate-600 whitespace-nowrap align-middle">
+                                ${sec.sln} 
+                                <span class="text-[10px] font-extrabold ${idTextClass} mx-1">${sec.id}</span>
+                                ${sec.restr ? `<span class="inline-flex items-center cursor-help ml-1" title="Restricted: Check course requirements"><i data-lucide="lock" class="w-3 h-3 text-rose-500 opacity-80"></i></span>` : ''}
+                                ${sec.addCode ? `<span class="inline-flex items-center cursor-help ml-0.5" title="Add Code Required"><i data-lucide="key" class="w-3 h-3 text-amber-500 opacity-80"></i></span>` : ''}
+                            </td>
+                            <td class="py-2.5 px-2 align-middle">
+                                <span class="px-1.5 py-0.5 rounded text-[10px] font-bold ${typeColor} cursor-help" title="${typeTooltip}">${sec.type}</span>
+                            </td>
+                            <td class="py-2.5 px-2 text-[11px] font-medium text-slate-700 align-middle">${sec.cred}</td>
+                            <td class="py-2.5 px-2 text-[11px] font-semibold text-slate-800 whitespace-nowrap align-middle">${daysHtml}</td>
+                            <td class="py-2.5 px-2 text-[11px] font-medium text-slate-700 whitespace-nowrap align-middle">${timeHtml}</td>
+                            <td class="py-2.5 px-2 text-[11px] font-medium text-slate-700 whitespace-nowrap align-middle">${bldgHtml}</td>
+                            <td class="py-2.5 px-2 text-[11px] font-medium text-slate-800 align-middle">${instHtml}</td>
+                            <td class="py-2.5 px-2 text-[11px] font-medium text-slate-600 align-middle">${sec.enrl}/${sec.limit}</td>
+                            <td class="py-2 px-2 max-w-[200px] align-middle">${detailsHtml}</td>
+                        </tr>
+                    `;
+
+                    // Inject inline notes if they exist
+                    if (sec.notes) {
+                        sectionRowsHtml += `
+                            <tr>
+                                <td colspan="9" class="bg-amber-50/40 border-b border-amber-100/50 p-0">
+                                    <div class="px-3 py-1.5 text-[11px] text-amber-900 font-medium flex items-start gap-2">
+                                        <i data-lucide="info" class="w-3.5 h-3.5 mt-0.5 opacity-60 shrink-0"></i>
+                                        <span class="font-mono">${sec.notes}</span>
+                                    </div>
+                                </td>
+                            </tr>
+                        `;
+                    }
+                });
+
+                const qColor = getQuarterColorClasses(course.quarter);
+
+                // Build Course Card (Simplified Summary with Quarter badge moved to right)
+                html += `
+                    <details class="course-card group bg-white border border-slate-300 rounded-lg shadow-sm overflow-hidden">
+                        
+                        <!-- Course Header (Summary) -->
+                        <summary class="cursor-pointer p-4 border-b border-slate-200 bg-slate-50/50 hover:bg-slate-100 flex flex-col md:flex-row md:items-center justify-between gap-4 transition-colors">
+                            <div class="flex items-center gap-3">
+                                <h2 class="text-xl font-extrabold text-slate-900 tracking-tight flex items-center gap-2">
+                                    ${course.prefix} ${course.number}
+                                </h2>
+                                <h3 class="text-base text-slate-600 font-medium">${course.title}</h3>
+                            </div>
+                            <div class="flex items-center justify-between md:justify-end w-full md:w-auto gap-4 shrink-0">
+                                <span class="px-2 py-0.5 rounded border text-[10px] font-bold uppercase tracking-wider ${qColor}">${course.quarter}</span>
+                                <div class="text-slate-400 group-open:rotate-180 transition-transform duration-200 shrink-0">
+                                    <i data-lucide="chevron-down" class="w-6 h-6"></i>
+                                </div>
+                            </div>
+                        </summary>
+
+                        <!-- Expanded Content -->
+                        <div class="bg-white">
+                            <!-- Course Level Notes -->
+                            ${course.notes ? `
+                                <div class="bg-blue-50/40 border-b border-blue-100 px-4 py-3 text-[11px] text-blue-900 font-mono font-medium flex gap-2 items-start">
+                                    <i data-lucide="alert-circle" class="w-4 h-4 opacity-70 shrink-0 font-sans mt-0.5"></i>
+                                    <span>${course.notes}</span>
+                                </div>
+                            ` : ''}
+
+                            <!-- Sections Table -->
+                            <div class="overflow-x-auto">
+                                <table class="w-full text-left border-collapse">
+                                    <thead class="bg-slate-50 border-b border-slate-200 text-[10px] uppercase font-bold text-slate-500 tracking-wider">
+                                        <tr>
+                                            <th class="py-2 px-3 font-semibold whitespace-nowrap">SLN Sec Restr</th>
+                                            <th class="py-2 px-2 font-semibold whitespace-nowrap">Type</th>
+                                            <th class="py-2 px-2 font-semibold whitespace-nowrap">CR</th>
+                                            <th class="py-2 px-2 font-semibold whitespace-nowrap">Days</th>
+                                            <th class="py-2 px-2 font-semibold whitespace-nowrap">Time</th>
+                                            <th class="py-2 px-2 font-semibold whitespace-nowrap">Bldg/Rm</th>
+                                            <th class="py-2 px-2 font-semibold whitespace-nowrap">Instructor</th>
+                                            <th class="py-2 px-2 font-semibold whitespace-nowrap">Enrl/Lim</th>
+                                            <th class="py-2 px-2 font-semibold whitespace-nowrap">Details</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        ${sectionRowsHtml}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </details>
+                `;
+            });
+
+            container.innerHTML = html;
+            lucide.createIcons(); // Re-initialize icons for newly injected HTML!
+        }
+
+        // 3. Search Interactivity & State Tracking
+        let currentQuery = '';
+        const searchInput = document.getElementById('omni-search');
+        const searchBtn = document.getElementById('search-btn');
+
+        // Function to visually enable/disable the Search button based on changes
+        function updateSearchButtonState() {
+            if (searchInput.value !== currentQuery) {
+                searchBtn.disabled = false;
+                searchBtn.classList.remove('bg-slate-300', 'text-slate-500', 'cursor-not-allowed');
+                searchBtn.classList.add('bg-purple-600', 'text-white', 'hover:bg-purple-700', 'shadow-md');
+            } else {
+                searchBtn.disabled = true;
+                searchBtn.classList.add('bg-slate-300', 'text-slate-500', 'cursor-not-allowed');
+                searchBtn.classList.remove('bg-purple-600', 'text-white', 'hover:bg-purple-700', 'shadow-md');
+            }
+        }
+
+        function executeSearch() {
+            currentQuery = searchInput.value;
+            updateSearchButtonState(); // Reset button visual state
+            
+            const query = currentQuery.toLowerCase().replace(/\s+/g, '');
+            
+            if (query.length === 0) {
+                renderCourses(mockCourses);
+                return;
+            }
+
+            const filtered = mockCourses.filter(course => {
+                const combinedStr = (course.prefix + course.number + course.title).toLowerCase().replace(/\s+/g, '');
+                
+                // Check course header
+                if (combinedStr.includes(query)) return true;
+                
+                // Check sections & stacked meetings
+                return course.sections.some(sec => {
+                    const matchSec = sec.sln.includes(query) || sec.id.toLowerCase().includes(query);
+                    const matchMeeting = sec.meetings.some(m => 
+                        m.instructor.toLowerCase().replace(/\s+/g, '').includes(query) ||
+                        m.bldg.toLowerCase().replace(/\s+/g, '').includes(query)
+                    );
+                    return matchSec || matchMeeting;
+                });
+            });
+
+            renderCourses(filtered);
+            
+            // Auto-expand if result is super specific
+            if (filtered.length > 0 && filtered.length <= 3 && query.length > 2) {
+                toggleAll(true);
+            }
+        }
+
+        // Event Listeners for Search
+        searchInput.addEventListener('input', updateSearchButtonState);
+        
+        searchInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter' && !searchBtn.disabled) {
+                executeSearch();
+            }
+        });
+        
+        searchBtn.addEventListener('click', executeSearch);
+
+        // Initial Render
+        renderCourses(mockCourses);
+        toggleAll(true);
+
+    </script>
+</body>
+</html>
