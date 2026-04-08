@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SQLite Range Requests Demo</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Point exactly to the UMD module on jsDelivr to fix the missing sourcemap warning -->
+    <script src="https://cdn.jsdelivr.net/npm/lucide@latest/dist/umd/lucide.min.js"></script>
+</head>
+<body class="bg-slate-50 min-h-screen text-slate-800 p-8 font-sans">
+    <div class="max-w-4xl mx-auto space-y-6">
+        
+        <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+            <h1 class="text-2xl font-bold flex items-center gap-2 mb-2">
+                <i data-lucide="database" class="w-6 h-6 text-blue-600"></i>
+                HTTP Range Request Demo
+            </h1>
+            <p class="text-slate-600 mb-6">
+                This demo uses WebAssembly and HTTP `Range` headers to query a SQLite database at a distance without downloading it.
+            </p>
+
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-semibold text-slate-700 mb-1">Database URL</label>
+                    <input type="text" id="dbUrl" 
+                        class="w-full px-4 py-2 bg-slate-50 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono text-sm"
+                        value="data/schedules.db" 
+                        placeholder="e.g., data/schedules.db">
+                    <p class="text-xs text-slate-500 mt-1">Make sure your local server is running with Range support.</p>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-semibold text-slate-700 mb-1">SQL Query</label>
+                    <textarea id="query" rows="3" 
+                        class="w-full px-4 py-2 bg-slate-50 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono text-sm"
+                        >SELECT * FROM courses LIMIT 5;</textarea>
+                </div>
+
+                <div class="flex items-center gap-4">
+                    <button id="runBtn" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-medium transition-colors flex items-center gap-2">
+                        <i data-lucide="play" class="w-4 h-4"></i> Execute Query
+                    </button>
+                    <span id="status" class="text-sm font-medium text-slate-500">Ready. Open your Network tab!</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+            <div class="bg-slate-100 px-4 py-3 border-b border-slate-200 flex justify-between items-center">
+                <h2 class="font-semibold text-slate-700">Results</h2>
+            </div>
+            <div id="output" class="p-4 overflow-x-auto min-h-[150px] bg-slate-50">
+                <div class="text-slate-400 text-center py-8">Results will appear here...</div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Fix: Handle the CommonJS default export wrapper securely -->
+    <script type="module">
+        // Import the entire module namespace to bypass strict named-export crashes
+        import * as sqljsHttpVfs from "https://esm.sh/sql.js-httpvfs@0.8.12";
+        
+        // Extract createDbWorker from the default object (how CDNs wrap CommonJS modules)
+        const createDbWorker = sqljsHttpVfs.createDbWorker || (sqljsHttpVfs.default && sqljsHttpVfs.default.createDbWorker);
+
+        lucide.createIcons();
+
+        const dbUrlInput = document.getElementById('dbUrl');
+        const queryInput = document.getElementById('query');
+        const runBtn = document.getElementById('runBtn');
+        const outputDiv = document.getElementById('output');
+        const statusText = document.getElementById('status');
+
+        // Fix cross-origin Web Worker restrictions by creating a local Blob worker that imports the remote worker
+        const workerScript = `importScripts("https://cdn.jsdelivr.net/npm/sql.js-httpvfs@0.8.12/dist/sqlite.worker.js");`;
+        const workerBlob = new Blob([workerScript], { type: "text/javascript" });
+        const workerUrl = URL.createObjectURL(workerBlob);
+        
+        const wasmUrl = "https://cdn.jsdelivr.net/npm/sql.js-httpvfs@0.8.12/dist/sql-wasm.wasm";
+
+        let worker = null;
+        let currentDbUrl = "";
+
+        async function initWorker(url) {
+            statusText.textContent = "Initializing WASM and Web Worker...";
+            statusText.className = "text-sm font-medium text-blue-600 animate-pulse";
+            
+            // Fix: Convert relative paths (data/schedules.db) to absolute URLs (http://localhost:8000/data/...)
+            // because Blob workers crash when trying to resolve relative paths internally.
+            const absoluteDbUrl = new URL(url, window.location.href).toString();
+
+            worker = await createDbWorker(
+                [{
+                    from: "inline",
+                    config: {
+                        serverMode: "full",
+                        url: absoluteDbUrl,
+                        requestChunkSize: 4096, // Fetches the DB in tiny 4KB chunks!
+                    },
+                }],
+                workerUrl,
+                wasmUrl
+            );
+            currentDbUrl = url;
+        }
+
+        runBtn.addEventListener('click', async () => {
+            const url = dbUrlInput.value.trim();
+            const query = queryInput.value.trim();
+
+            if (!url || !query) return;
+
+            try {
+                runBtn.disabled = true;
+                runBtn.classList.add('opacity-50', 'cursor-not-allowed');
+                outputDiv.innerHTML = `<div class="flex justify-center py-8"><i data-lucide="loader-2" class="w-6 h-6 animate-spin text-blue-600"></i></div>`;
+                lucide.createIcons();
+
+                // Only spin up the worker if we haven't yet, or if the user changed the URL
+                if (!worker || currentDbUrl !== url) {
+                    await initWorker(url);
+                }
+
+                statusText.textContent = "Fetching chunks & executing query...";
+                
+                // Execute the query!
+                const result = await worker.db.query(query);
+
+                // Render Results
+                if (result && result.length > 0) {
+                    let html = '<table class="min-w-full divide-y divide-slate-200 text-sm"><thead class="bg-slate-100"><tr>';
+                    const keys = Object.keys(result[0]);
+                    
+                    keys.forEach(key => {
+                        html += `<th class="px-4 py-3 text-left font-semibold text-slate-700 uppercase tracking-wider">${key}</th>`;
+                    });
+                    html += '</tr></thead><tbody class="bg-white divide-y divide-slate-100">';
+                    
+                    result.forEach(row => {
+                        html += '<tr class="hover:bg-slate-50">';
+                        keys.forEach(key => {
+                            html += `<td class="px-4 py-3 whitespace-nowrap text-slate-600">${row[key] !== null ? row[key] : '<em>null</em>'}</td>`;
+                        });
+                        html += '</tr>';
+                    });
+                    html += '</tbody></table>';
+                    outputDiv.innerHTML = html;
+                } else {
+                    outputDiv.innerHTML = "<div class='text-slate-500 text-center py-8'>Query executed successfully, but returned 0 rows.</div>";
+                }
+                
+                statusText.textContent = "Success! Check your Network tab.";
+                statusText.className = "text-sm font-medium text-emerald-600";
+
+            } catch (err) {
+                console.error(err);
+                outputDiv.innerHTML = `<div class="p-4 text-red-700 bg-red-50 rounded-lg border border-red-200 font-mono text-sm break-all">Error: ${err.message}</div>`;
+                statusText.textContent = "Error occurred.";
+                statusText.className = "text-sm font-medium text-red-600";
+            } finally {
+                runBtn.disabled = false;
+                runBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+            }
+        });
+    </script>
+</body>
+</html>
