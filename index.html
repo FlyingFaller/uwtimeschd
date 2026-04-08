@@ -3,150 +3,250 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>UWTimeSchd</title>
+    <title>UW Time Schedule - Command Center</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.8.0/sql-wasm.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/lucide@latest/dist/umd/lucide.min.js"></script>
     <style>
-        /* CSS to hide the default details triangle */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+        th { position: sticky; top: 0; background-color: #f8fafc; z-index: 10; }
         details > summary { list-style: none; }
         details > summary::-webkit-details-marker { display: none; }
+        details[open] summary ~ * { animation: slideDown 0.2s ease-in-out; }
+        @keyframes slideDown { 0% { opacity: 0; transform: translateY(-5px); } 100% { opacity: 1; transform: translateY(0); } }
     </style>
 </head>
-<body class="bg-gray-50 flex items-start justify-center min-h-screen font-sans pt-12 pb-12">
-    <div class="p-8 bg-white rounded-2xl shadow-sm border border-gray-100 max-w-5xl w-full mx-4">
-        
-        <h1 class="text-3xl font-bold text-gray-900 mb-2 text-center">UWTimeSchd Archive</h1>
-        <p class="text-gray-500 mb-8 text-center" id="status-text">Loading database...</p>
-        
-        <!-- Search & Sort Controls -->
-        <div class="flex flex-col md:flex-row gap-3 mb-6">
-            <input 
-                type="text" 
-                id="search-input" 
-                placeholder="Search prefix, course number, title, or instructor (e.g., AA210, Hurlen)..." 
-                class="flex-1 p-4 text-lg border border-gray-300 rounded-xl shadow-sm focus:ring-2 focus:ring-purple-500 outline-none disabled:bg-gray-100"
-                disabled
-            >
-            <select 
-                id="sort-select" 
-                class="p-4 text-lg border border-gray-300 rounded-xl shadow-sm bg-white focus:ring-2 focus:ring-purple-500 outline-none disabled:bg-gray-100 cursor-pointer"
-                disabled
-            >
-                <option value="newest">Newest First</option>
-                <option value="oldest">Oldest First</option>
-                <option value="alpha">Course (A-Z)</option>
-            </select>
-            <button 
-                id="search-btn"
-                class="px-8 py-4 bg-purple-700 hover:bg-purple-800 text-white font-bold rounded-xl shadow-sm disabled:opacity-50 transition-colors whitespace-nowrap"
-                disabled
-            >
-                Search
-            </button>
-        </div>
+<body class="bg-slate-200 text-slate-800 font-sans h-screen flex overflow-hidden">
 
-        <!-- Filters Panel (Permanent) -->
-        <div id="filters-panel" class="mb-6 p-6 bg-purple-50/50 border border-purple-100 rounded-xl shadow-inner">
-            <h3 class="text-xs font-bold text-purple-800 uppercase tracking-wider mb-4">Refine Results</h3>
-            
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                
-                <!-- Course Level Filter -->
-                <div>
-                    <label class="block text-xs font-semibold text-gray-600 mb-1">Course Level</label>
-                    <select id="filter-level" class="w-full p-2 border border-gray-200 rounded text-sm outline-none focus:ring-1 focus:ring-purple-500 bg-white cursor-pointer">
-                        <option value="all">All Levels</option>
-                        <option value="100">100 Level</option>
-                        <option value="200">200 Level</option>
-                        <option value="300">300 Level</option>
-                        <option value="400">400 Level</option>
-                        <option value="500">500+ Level</option>
-                    </select>
-                </div>
-
-                <!-- Credits Filter (Min/Max) -->
-                <div>
-                    <label class="block text-xs font-semibold text-gray-600 mb-1">Credits Range</label>
-                    <div class="flex items-center gap-2">
-                        <input type="number" id="filter-credits-min" min="0" max="30" placeholder="Min" class="w-full p-2 border border-gray-200 rounded text-sm outline-none focus:ring-1 focus:ring-purple-500 bg-white">
-                        <span class="text-gray-400 text-sm font-semibold">-</span>
-                        <input type="number" id="filter-credits-max" min="0" max="30" placeholder="Max" class="w-full p-2 border border-gray-200 rounded text-sm outline-none focus:ring-1 focus:ring-purple-500 bg-white">
-                    </div>
-                </div>
-
-                <!-- Section Type Filter -->
-                <div>
-                    <label class="block text-xs font-semibold text-gray-600 mb-1">Section Type</label>
-                    <select id="filter-type" class="w-full p-2 border border-gray-200 rounded text-sm outline-none focus:ring-1 focus:ring-purple-500 bg-white cursor-pointer">
-                        <option value="all">All Types</option>
-                        <option value="LC">Lecture (LC)</option>
-                        <option value="CK">Clerkship (CK)</option>
-                        <option value="CL">Clinic (CL)</option>
-                        <option value="CO">Conference (CO)</option>
-                        <option value="IS">Independent Study (IS)</option>
-                        <option value="LB">Lab (LB)</option>
-                        <option value="PR">Practicum (PR)</option>
-                        <option value="QZ">Quiz (QZ)</option>
-                        <option value="SM">Seminar (SM)</option>
-                        <option value="ST">Studio (ST)</option>
-                    </select>
-                </div>
-
-                <!-- Fee Filter -->
-                <div>
-                    <label class="block text-xs font-semibold text-gray-600 mb-1">Course Fees</label>
-                    <select id="filter-fee" class="w-full p-2 border border-gray-200 rounded text-sm outline-none focus:ring-1 focus:ring-purple-500 bg-white cursor-pointer">
-                        <option value="all">Show All</option>
-                        <option value="no_fee">No Extra Fees</option>
-                        <option value="has_fee">Has Extra Fees</option>
-                    </select>
-                </div>
-
-                <!-- Prerequisites Filter -->
-                <div>
-                    <label class="block text-xs font-semibold text-gray-600 mb-1">Prerequisites</label>
-                    <select id="filter-prereq" class="w-full p-2 border border-gray-200 rounded text-sm outline-none focus:ring-1 focus:ring-purple-500 bg-white cursor-pointer">
-                        <option value="all">Show All</option>
-                        <option value="no">No Prereqs Required</option>
-                        <option value="yes">Has Prereqs</option>
-                    </select>
-                </div>
-
-                <!-- CR/NC Filter -->
-                <div>
-                    <label class="block text-xs font-semibold text-gray-600 mb-1">Grading</label>
-                    <select id="filter-crnc" class="w-full p-2 border border-gray-200 rounded text-sm outline-none focus:ring-1 focus:ring-purple-500 bg-white cursor-pointer">
-                        <option value="all">All Grading Types</option>
-                        <option value="crnc">CR/NC Only</option>
-                    </select>
-                </div>
-
-                <!-- Days Filter -->
-                <div class="md:col-span-2 lg:col-span-2">
-                    <label class="block text-xs font-semibold text-gray-600 mb-1">Meeting Days</label>
-                    <div class="flex flex-wrap gap-4 mt-2 text-sm">
-                        <label class="flex items-center gap-1.5 cursor-pointer"><input type="checkbox" value="M" class="day-filter w-4 h-4 text-purple-600 rounded"> M</label>
-                        <label class="flex items-center gap-1.5 cursor-pointer"><input type="checkbox" value="T" class="day-filter w-4 h-4 text-purple-600 rounded"> T</label>
-                        <label class="flex items-center gap-1.5 cursor-pointer"><input type="checkbox" value="W" class="day-filter w-4 h-4 text-purple-600 rounded"> W</label>
-                        <label class="flex items-center gap-1.5 cursor-pointer"><input type="checkbox" value="Th" class="day-filter w-4 h-4 text-purple-600 rounded"> Th</label>
-                        <label class="flex items-center gap-1.5 cursor-pointer"><input type="checkbox" value="F" class="day-filter w-4 h-4 text-purple-600 rounded"> F</label>
-                    </div>
-                </div>
+    <!-- LEFT SIDEBAR: CONTROL PANEL -->
+    <aside class="w-80 bg-white border-r border-slate-300 flex flex-col h-full shadow-lg z-20 shrink-0">
+        <!-- Logo / Header -->
+        <div class="p-5 border-b border-slate-200 bg-slate-50 flex items-center gap-3">
+            <div class="bg-purple-700 text-white p-2 rounded flex items-center justify-center">
+                <i data-lucide="library" class="w-5 h-5"></i>
+            </div>
+            <div>
+                <h1 class="text-sm font-bold tracking-tight text-slate-900 uppercase">UW Time Schedule</h1>
+                <p id="db-status" class="text-[11px] text-amber-500 font-bold uppercase tracking-wider animate-pulse">Connecting to DB...</p>
             </div>
         </div>
 
-        <!-- Toolbar (Expand/Collapse All) -->
-        <div id="toolbar" class="hidden flex justify-end gap-4 mb-4 text-sm">
-            <button onclick="toggleAll(true)" class="text-purple-700 hover:underline font-semibold">Expand All</button>
-            <button onclick="toggleAll(false)" class="text-gray-500 hover:underline font-semibold">Collapse All</button>
+        <!-- Filters Scroll Area -->
+        <div class="flex-1 overflow-y-auto p-5 space-y-6">
+            
+            <!-- Category: Department & Course -->
+            <div>
+                <h2 class="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest mb-3">Department & Course</h2>
+                <div class="space-y-4">
+                    
+                    <!-- Searchable Majors List -->
+                    <div>
+                        <div class="flex justify-between items-end mb-1">
+                            <label class="text-xs font-semibold text-slate-700">Majors / Departments</label>
+                            <button id="clear-majors" class="text-[10px] text-purple-600 hover:underline">Clear</button>
+                        </div>
+                        <div class="relative mb-2">
+                            <input type="text" placeholder="Filter majors..." class="w-full text-xs border border-slate-300 rounded p-1.5 pl-7 focus:ring-2 focus:ring-purple-500 outline-none">
+                            <i data-lucide="search" class="w-3.5 h-3.5 text-slate-400 absolute left-2 top-2"></i>
+                        </div>
+                        <div class="max-h-36 overflow-y-auto space-y-1 text-xs text-slate-700 border border-slate-200 p-1.5 rounded bg-slate-50 shadow-inner">
+                            <div class="text-center text-slate-400 text-xs py-4 flex flex-col items-center">
+                                <i data-lucide="loader-2" class="w-4 h-4 animate-spin mb-1"></i> Loading majors...
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Course Level -->
+                    <div>
+                        <label class="text-xs font-semibold text-slate-700 mb-1 block">Course Level</label>
+                        <div class="grid grid-cols-4 gap-1" id="level-container">
+                            <button data-level="100" class="level-btn py-1 text-[11px] border border-slate-300 rounded hover:bg-slate-50 font-medium filter-btn">100</button>
+                            <button data-level="200" class="level-btn py-1 text-[11px] border border-slate-300 rounded hover:bg-slate-50 font-medium filter-btn">200</button>
+                            <button data-level="300" class="level-btn py-1 text-[11px] border border-slate-300 rounded hover:bg-slate-50 font-medium filter-btn">300</button>
+                            <button data-level="400" class="level-btn py-1 text-[11px] border border-slate-300 rounded hover:bg-slate-50 font-medium filter-btn">400</button>
+                            <button data-level="500" class="level-btn py-1 text-[11px] border border-slate-300 rounded hover:bg-slate-50 font-medium filter-btn">500</button>
+                            <button data-level="600" class="level-btn py-1 text-[11px] border border-slate-300 rounded hover:bg-slate-50 font-medium filter-btn">600</button>
+                            <button data-level="700" class="level-btn py-1 text-[11px] border border-slate-300 rounded hover:bg-slate-50 font-medium filter-btn">700</button>
+                            <button data-level="800" class="level-btn py-1 text-[11px] border border-slate-300 rounded hover:bg-slate-50 font-medium filter-btn">800+</button>
+                        </div>
+                    </div>
+
+                    <!-- Credits -->
+                    <div class="flex gap-2">
+                        <div class="flex-1">
+                            <label class="text-[10px] font-semibold text-slate-500 uppercase">Min Credits</label>
+                            <input type="number" id="min-credits" placeholder="0" class="w-full text-xs border border-slate-300 rounded p-1.5 outline-none focus:ring-1 focus:ring-purple-500">
+                        </div>
+                        <div class="flex-1">
+                            <label class="text-[10px] font-semibold text-slate-500 uppercase">Max Credits</label>
+                            <input type="number" id="max-credits" placeholder="30" class="w-full text-xs border border-slate-300 rounded p-1.5 outline-none focus:ring-1 focus:ring-purple-500">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <hr class="border-slate-200">
+
+            <!-- Category: Schedule & Time -->
+            <div>
+                <h2 class="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest mb-3">Schedule & Time</h2>
+                
+                <div class="space-y-4">
+                    
+                    <!-- Apply To Scope & TBA Controls -->
+                    <div class="bg-indigo-50 border border-indigo-100 p-2 rounded space-y-2">
+                        <div class="flex justify-between items-center">
+                            <label class="text-[10px] font-bold text-indigo-800 uppercase tracking-wide">Apply Limits To:</label>
+                            <select id="time-scope" class="text-[10px] border border-indigo-200 rounded p-1 outline-none bg-white font-bold text-indigo-700 shadow-sm cursor-pointer">
+                                <option value="primary">Primary Sections</option>
+                                <option value="all">All Sections</option>
+                            </select>
+                        </div>
+                        <div class="flex justify-between items-center border-t border-indigo-100/50 pt-2">
+                            <label class="text-[10px] font-bold text-indigo-800 uppercase tracking-wide">TBA Meetings:</label>
+                            <div id="tba-toggle" class="flex bg-white rounded p-0.5 border border-indigo-200 cursor-pointer shadow-sm">
+                                <button data-tba="include" class="tba-btn text-[10px] px-2 py-0.5 bg-indigo-100 shadow-inner rounded font-bold text-indigo-800 active">Include</button>
+                                <button data-tba="exclude" class="tba-btn text-[10px] px-2 py-0.5 text-slate-500 font-medium hover:text-slate-700 transition-colors">Exclude</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Days -->
+                    <div>
+                        <div class="flex justify-between items-center mb-1">
+                            <label class="text-xs font-semibold text-slate-700">Meeting Days</label>
+                            <div id="day-mode-toggle" class="flex bg-slate-100 rounded p-0.5 border border-slate-200 cursor-pointer">
+                                <button data-mode="include" class="mode-btn text-[10px] px-2 py-0.5 bg-white shadow-sm rounded font-bold text-slate-700 active">Include</button>
+                                <button data-mode="exclude" class="mode-btn text-[10px] px-2 py-0.5 text-slate-500 font-medium hover:text-slate-700 transition-colors">Exclude</button>
+                            </div>
+                        </div>
+                        <div class="flex gap-1" id="days-container">
+                            <button data-day="M" class="flex-1 py-1 text-xs border border-slate-300 rounded hover:bg-slate-50 font-medium filter-btn day-btn">M</button>
+                            <button data-day="T" class="flex-1 py-1 text-xs border border-slate-300 rounded hover:bg-slate-50 font-medium filter-btn day-btn">T</button>
+                            <button data-day="W" class="flex-1 py-1 text-xs border border-slate-300 rounded hover:bg-slate-50 font-medium filter-btn day-btn">W</button>
+                            <button data-day="Th" class="flex-1 py-1 text-xs border border-slate-300 rounded hover:bg-slate-50 font-medium filter-btn day-btn">Th</button>
+                            <button data-day="F" class="flex-1 py-1 text-xs border border-slate-300 rounded hover:bg-slate-50 font-medium filter-btn day-btn">F</button>
+                        </div>
+                        <p class="text-[10px] text-slate-400 mt-1 italic text-center" id="day-mode-desc">Must meet on ALL selected days</p>
+                    </div>
+
+                    <!-- Time Bounds (Restored to System Default Time Inputs) -->
+                    <div class="flex gap-2">
+                        <div class="flex-1">
+                            <label class="text-[10px] font-semibold text-slate-500 uppercase">Starts After</label>
+                            <input type="time" id="start-time" class="w-full text-xs border border-slate-300 rounded p-1.5 outline-none focus:ring-1 focus:ring-purple-500">
+                        </div>
+                        <div class="flex-1">
+                            <label class="text-[10px] font-semibold text-slate-500 uppercase">Ends Before</label>
+                            <input type="time" id="end-time" class="w-full text-xs border border-slate-300 rounded p-1.5 outline-none focus:ring-1 focus:ring-purple-500">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <hr class="border-slate-200">
+
+            <!-- Category: Section Types -->
+            <div>
+                <h2 class="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest mb-3">Section Types</h2>
+                <div class="grid grid-cols-2 gap-y-2 gap-x-1 text-xs text-slate-700" id="section-types-container">
+                    <label class="flex items-center gap-2 cursor-pointer hover:bg-slate-50 p-1 -ml-1 rounded"><input type="checkbox" data-type="LC" class="accent-purple-600 type-checkbox"> Lecture (LC)</label>
+                    <label class="flex items-center gap-2 cursor-pointer hover:bg-slate-50 p-1 -ml-1 rounded"><input type="checkbox" data-type="QZ" class="accent-purple-600 type-checkbox"> Quiz (QZ)</label>
+                    <label class="flex items-center gap-2 cursor-pointer hover:bg-slate-50 p-1 -ml-1 rounded"><input type="checkbox" data-type="LB" class="accent-purple-600 type-checkbox"> Lab (LB)</label>
+                    <label class="flex items-center gap-2 cursor-pointer hover:bg-slate-50 p-1 -ml-1 rounded"><input type="checkbox" data-type="SM" class="accent-purple-600 type-checkbox"> Seminar (SM)</label>
+                    <label class="flex items-center gap-2 cursor-pointer hover:bg-slate-50 p-1 -ml-1 rounded"><input type="checkbox" data-type="ST" class="accent-purple-600 type-checkbox"> Studio (ST)</label>
+                    <label class="flex items-center gap-2 cursor-pointer hover:bg-slate-50 p-1 -ml-1 rounded"><input type="checkbox" data-type="PR" class="accent-purple-600 type-checkbox"> Practicum (PR)</label>
+                    <label class="flex items-center gap-2 cursor-pointer hover:bg-slate-50 p-1 -ml-1 rounded"><input type="checkbox" data-type="CL" class="accent-purple-600 type-checkbox"> Clinic (CL)</label>
+                    <label class="flex items-center gap-2 cursor-pointer hover:bg-slate-50 p-1 -ml-1 rounded"><input type="checkbox" data-type="CK" class="accent-purple-600 type-checkbox"> Clerkship (CK)</label>
+                    <label class="flex items-center gap-2 cursor-pointer hover:bg-slate-50 p-1 -ml-1 rounded"><input type="checkbox" data-type="CO" class="accent-purple-600 type-checkbox"> Conference (CO)</label>
+                    <label class="flex items-center gap-2 cursor-pointer hover:bg-slate-50 p-1 -ml-1 rounded"><input type="checkbox" data-type="IS" class="accent-purple-600 type-checkbox"> Ind. Study (IS)</label>
+                </div>
+            </div>
+
+            <hr class="border-slate-200">
+
+            <!-- Category: Attributes & Grading -->
+            <div>
+                <h2 class="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest mb-3">Attributes & Grading</h2>
+                
+                <div class="flex flex-wrap gap-2 mb-4" id="attributes-container">
+                    <button data-attr="Restricted" class="filter-chip px-2 py-1 text-[10px] uppercase tracking-wide border border-slate-300 rounded-full hover:bg-slate-100 font-bold text-slate-600 bg-white shadow-sm" title="Has Registration Restrictions">Restricted</button>
+                    <button data-attr="Add Code" class="filter-chip px-2 py-1 text-[10px] uppercase tracking-wide border border-slate-300 rounded-full hover:bg-slate-100 font-bold text-slate-600 bg-white shadow-sm" title="Add Code Required">Add Code (&gt;)</button>
+                    <button data-attr="CR/NC" class="filter-chip px-2 py-1 text-[10px] uppercase tracking-wide border border-slate-300 rounded-full hover:bg-slate-100 font-bold text-slate-600 bg-white shadow-sm" title="Credit / No Credit Only">CR/NC Only</button>
+                    <button data-attr="No Extra Fees" class="filter-chip px-2 py-1 text-[10px] uppercase tracking-wide border border-slate-300 rounded-full hover:bg-slate-100 font-bold text-slate-600 bg-white shadow-sm">No Extra Fees</button>
+                    <button data-attr="#" class="filter-chip px-2 py-1 text-[10px] uppercase tracking-wide border border-slate-300 rounded-full hover:bg-slate-100 font-bold text-slate-600 bg-white shadow-sm" title="Not eligible for Financial Aid">No FinAid (#)</button>
+
+                    <button data-attr="W" class="filter-chip px-2 py-1 text-[10px] uppercase tracking-wide border border-slate-300 rounded-full hover:bg-slate-100 font-bold text-slate-600 bg-white shadow-sm">Writing (W)</button>
+                    <button data-attr="H" class="filter-chip px-2 py-1 text-[10px] uppercase tracking-wide border border-slate-300 rounded-full hover:bg-slate-100 font-bold text-slate-600 bg-white shadow-sm">Honors (H)</button>
+                    <button data-attr="J" class="filter-chip px-2 py-1 text-[10px] uppercase tracking-wide border border-slate-300 rounded-full hover:bg-slate-100 font-bold text-slate-600 bg-white shadow-sm">Jointly Offered (J)</button>
+                    <button data-attr="%" class="filter-chip px-2 py-1 text-[10px] uppercase tracking-wide border border-slate-300 rounded-full hover:bg-slate-100 font-bold text-slate-600 bg-white shadow-sm">New Course (%)</button>
+
+                    <button data-attr="O" class="filter-chip px-2 py-1 text-[10px] uppercase tracking-wide border border-slate-300 rounded-full hover:bg-slate-100 font-bold text-slate-600 bg-white shadow-sm">Online (O)</button>
+                    <button data-attr="A" class="filter-chip px-2 py-1 text-[10px] uppercase tracking-wide border border-slate-300 rounded-full hover:bg-slate-100 font-bold text-slate-600 bg-white shadow-sm">Async (A)</button>
+                    <button data-attr="B" class="filter-chip px-2 py-1 text-[10px] uppercase tracking-wide border border-slate-300 rounded-full hover:bg-slate-100 font-bold text-slate-600 bg-white shadow-sm">Hybrid (B)</button>
+                    <button data-attr="E" class="filter-chip px-2 py-1 text-[10px] uppercase tracking-wide border border-slate-300 rounded-full hover:bg-slate-100 font-bold text-slate-600 bg-white shadow-sm">Community (E)</button>
+                    <button data-attr="S" class="filter-chip px-2 py-1 text-[10px] uppercase tracking-wide border border-slate-300 rounded-full hover:bg-slate-100 font-bold text-slate-600 bg-white shadow-sm">Service (S)</button>
+                    <button data-attr="R" class="filter-chip px-2 py-1 text-[10px] uppercase tracking-wide border border-slate-300 rounded-full hover:bg-slate-100 font-bold text-slate-600 bg-white shadow-sm">Research (R)</button>
+                </div>
+            </div>
+
         </div>
+    </aside>
 
-        <!-- Results Container -->
-        <div id="results-container" class="space-y-4"></div>
+    <!-- MAIN CONTENT AREA -->
+    <main class="flex-1 flex flex-col min-w-0 bg-slate-100">
         
-    </div>
+        <header class="bg-white border-b border-slate-300 shadow-sm z-10 shrink-0">
+            <div class="p-4 flex flex-col gap-3 max-w-6xl mx-auto w-full">
+                
+                <div class="flex gap-2 w-full">
+                    <div class="relative flex-1">
+                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <i data-lucide="search" class="text-slate-400 w-5 h-5"></i>
+                        </div>
+                        <input 
+                            type="text" 
+                            id="omni-search"
+                            disabled
+                            placeholder="Search prefix, course number, title, instructor, building, or SLN... (e.g. AA 210, Hurlen)" 
+                            class="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-300 rounded-lg shadow-inner text-sm focus:bg-white focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none transition-all disabled:opacity-50"
+                        >
+                    </div>
+                    <button id="search-btn" class="px-5 py-2.5 rounded-lg text-sm font-bold transition-all bg-slate-300 text-slate-500 cursor-not-allowed shrink-0" disabled>
+                        Search
+                    </button>
+                </div>
 
-    <!-- External Logic loaded here -->
-    <script src="js/app.js"></script>
+                <div class="flex items-center justify-between">
+                    <div class="text-sm text-slate-500">
+                        <span id="result-count" class="font-extrabold text-slate-800">0</span> courses found
+                    </div>
+                    
+                    <div class="flex items-center gap-3">
+                        <div class="flex gap-2 mr-2">
+                            <button id="expand-all-btn" class="text-[11px] font-bold text-purple-700 hover:bg-purple-50 border border-transparent hover:border-purple-200 px-2 py-1 rounded transition-colors">Expand All</button>
+                            <button id="collapse-all-btn" class="text-[11px] font-bold text-slate-500 hover:bg-slate-200 border border-transparent hover:border-slate-300 px-2 py-1 rounded transition-colors">Collapse All</button>
+                        </div>
+                        
+                        <select id="sort-select" class="text-xs border border-slate-300 rounded p-1.5 outline-none bg-white font-bold text-slate-700 cursor-pointer shadow-sm">
+                            <option value="newest" selected>Sort: Newest First</option>
+                            <option value="course">Sort: Course (A-Z)</option>
+                            <option value="oldest">Sort: Oldest First</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <div class="flex-1 overflow-y-auto p-4 md:p-6 relative">
+            <div id="results-container" class="max-w-6xl mx-auto space-y-4">
+                <!-- Courses injected here -->
+            </div>
+        </div>
+    </main>
+
+    <script type="module" src="./js/app.js"></script>
 </body>
 </html>

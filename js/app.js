@@ -1,306 +1,259 @@
-// ==========================================
-// 1. STATE & DOM ELEMENTS
-// ==========================================
-let db = null;
-const DOM = {
-    status: document.getElementById('status-text'),
-    searchIn: document.getElementById('search-input'),
-    searchBtn: document.getElementById('search-btn'),
-    sortSel: document.getElementById('sort-select'),
-    results: document.getElementById('results-container'),
-    toolbar: document.getElementById('toolbar'),
-    
-    // Filter DOM Elements
-    filterLevel: document.getElementById('filter-level'),
-    filterCreditsMin: document.getElementById('filter-credits-min'),
-    filterCreditsMax: document.getElementById('filter-credits-max'),
-    filterType: document.getElementById('filter-type'),
-    filterFee: document.getElementById('filter-fee'),
-    filterPrereq: document.getElementById('filter-prereq'),
-    filterCrnc: document.getElementById('filter-crnc'),
-    dayFilters: document.querySelectorAll('.day-filter')
-};
+import { DatabaseManager } from './database.js';
+import { UIManager } from './ui.js';
 
-// ==========================================
-// 2. INITIALIZATION
-// ==========================================
-async function loadDatabase() {
-    try {
-        const SQL = await initSqlJs({
-            locateFile: file => `https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.8.0/${file}`
-        });
-        const response = await fetch('data/schedules.db');
-        if (!response.ok) throw new Error("Could not find data/schedules.db");
-
-        const buffer = await response.arrayBuffer();
-        db = new SQL.Database(new Uint8Array(buffer));
+class App {
+    constructor() {
+        this.db = new DatabaseManager("data/schedules.db");
+        this.ui = new UIManager();
         
-        DOM.status.innerText = "Database loaded! Ready to search.";
-        DOM.status.className = "text-green-600 mb-8 text-center font-semibold";
-        DOM.searchIn.disabled = false;
-        DOM.searchBtn.disabled = false;
-        DOM.sortSel.disabled = false;
-
-    } catch (error) {
-        console.error(error);
-        DOM.status.innerText = "Error: " + error.message;
-        DOM.status.className = "text-red-600 mb-8 text-center font-semibold";
+        this.searchInput = document.getElementById('omni-search');
+        this.searchBtn = document.getElementById('search-btn');
+        this.sortSelect = document.getElementById('sort-select');
+        
+        this.currentQuery = '';
+        this.isExpanded = false; // Restore memory tracking
+        this.bindEvents();
     }
-}
 
-// ==========================================
-// 3. SEARCH & SQL EXECUTION
-// ==========================================
-function executeSearch() {
-    if (!db) return;
-    const query = DOM.searchIn.value.trim();
-    if (query.length < 2) return;
+    bindEvents() {
+        // Core Search Interactions
+        this.searchInput.addEventListener('input', () => this.markSearchReady());
+        this.searchInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter' && !this.searchBtn.disabled) this.executeSearch();
+        });
+        this.searchBtn.addEventListener('click', () => this.executeSearch());
 
-    DOM.results.innerHTML = '<p class="text-center text-gray-500 py-8">Searching...</p>';
-    DOM.toolbar.classList.add('hidden');
+        // Accordion Controls
+        document.getElementById('expand-all-btn').addEventListener('click', () => {
+            this.isExpanded = true;
+            this.ui.toggleAll(true);
+        });
+        document.getElementById('collapse-all-btn').addEventListener('click', () => {
+            this.isExpanded = false;
+            this.ui.toggleAll(false);
+        });
 
-    setTimeout(() => {
-        const safeQuery = `%${query}%`;
-        const spacelessQuery = `%${query.replace(/\s+/g, '')}%`;
-        
-        // ------------------------------------------
-        // A. Handle Sorting Logic
-        // ------------------------------------------
-        let orderByClause = "ORDER BY c.year DESC, CASE c.quarter WHEN 'WIN' THEN 1 WHEN 'SPR' THEN 2 WHEN 'SUM' THEN 3 WHEN 'AUT' THEN 4 END DESC, c.course_prefix, c.course_number";
-        if (DOM.sortSel.value === 'oldest') {
-            orderByClause = "ORDER BY c.year ASC, CASE c.quarter WHEN 'WIN' THEN 1 WHEN 'SPR' THEN 2 WHEN 'SUM' THEN 3 WHEN 'AUT' THEN 4 END ASC, c.course_prefix, c.course_number";
-        } else if (DOM.sortSel.value === 'alpha') {
-            orderByClause = "ORDER BY c.course_prefix ASC, c.course_number ASC, c.year DESC, CASE c.quarter WHEN 'WIN' THEN 1 WHEN 'SPR' THEN 2 WHEN 'SUM' THEN 3 WHEN 'AUT' THEN 4 END DESC";
-        }
+        // Sorting & Scope Selects
+        this.sortSelect.addEventListener('change', () => this.markSearchReady());
+        document.getElementById('time-scope').addEventListener('change', () => this.markSearchReady());
 
-        // ------------------------------------------
-        // B. Handle Advanced Filtering Logic
-        // ------------------------------------------
-        let filterConditions = "";
+        // Number and Text Inputs
+        const inputIds = ['min-credits', 'max-credits', 'start-time', 'end-time'];
+        inputIds.forEach(id => {
+            document.getElementById(id).addEventListener('input', () => this.markSearchReady());
+        });
 
-        // 1. Course Level Filter
-        const levelVal = DOM.filterLevel.value;
-        if (levelVal !== 'all') {
-            const minLvl = parseInt(levelVal);
-            if (minLvl === 500) {
-                filterConditions += ` AND c2.course_number >= 500`;
-            } else {
-                filterConditions += ` AND c2.course_number >= ${minLvl} AND c2.course_number <= ${minLvl + 99}`;
-            }
-        }
+        // Section Type Checkboxes
+        document.querySelectorAll('.type-checkbox').forEach(cb => {
+            cb.addEventListener('change', () => this.markSearchReady());
+        });
 
-        // 2. Exact Credits Filter (Min / Max)
-        const minCred = parseInt(DOM.filterCreditsMin.value);
-        if (!isNaN(minCred)) filterConditions += ` AND s2.credits_max >= ${minCred}`;
-        
-        const maxCred = parseInt(DOM.filterCreditsMax.value);
-        if (!isNaN(maxCred)) filterConditions += ` AND s2.credits_min <= ${maxCred}`;
+        // Clear Majors Button
+        document.getElementById('clear-majors').addEventListener('click', () => {
+            const majorCheckboxes = document.querySelectorAll('.major-checkbox');
+            majorCheckboxes.forEach(box => {
+                box.checked = box.value === 'ALL';
+            });
+            this.markSearchReady();
+        });
 
-        // 3. Section Type Filter
-        const typeVal = DOM.filterType.value;
-        if (typeVal !== 'all') {
-            if (typeVal === 'LC') {
-                filterConditions += " AND (s2.section_type IS NULL OR s2.section_type = 'LC')";
-            } else {
-                filterConditions += ` AND s2.section_type = '${typeVal}'`;
-            }
-        }
+        // Day Mode Toggle (Include/Exclude) + UX hint update
+        const modeBtns = document.querySelectorAll('.mode-btn');
+        const modeDesc = document.getElementById('day-mode-desc');
+        modeBtns.forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                modeBtns.forEach(b => {
+                    b.classList.remove('bg-white', 'shadow-sm', 'text-slate-700', 'active');
+                    b.classList.add('text-slate-500');
+                });
+                const target = e.target;
+                target.classList.remove('text-slate-500');
+                target.classList.add('bg-white', 'shadow-sm', 'text-slate-700', 'active');
+                
+                if (target.dataset.mode === 'include') {
+                    modeDesc.textContent = "Must meet on ALL selected days";
+                } else {
+                    modeDesc.textContent = "Cannot meet on ANY selected day";
+                }
+                this.markSearchReady();
+            });
+        });
 
-        // 4. Fees Filter
-        if (DOM.filterFee.value === 'no_fee') filterConditions += " AND (s2.fee IS NULL OR s2.fee = 0)";
-        if (DOM.filterFee.value === 'has_fee') filterConditions += " AND s2.fee > 0";
+        // TBA Toggle
+        const tbaBtns = document.querySelectorAll('.tba-btn');
+        tbaBtns.forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                tbaBtns.forEach(b => {
+                    b.classList.remove('bg-indigo-100', 'shadow-inner', 'text-indigo-800', 'active');
+                    b.classList.add('text-slate-500');
+                });
+                const target = e.target;
+                target.classList.remove('text-slate-500');
+                target.classList.add('bg-indigo-100', 'shadow-inner', 'text-indigo-800', 'active');
+                this.markSearchReady();
+            });
+        });
 
-        // 5. Prerequisites Filter
-        if (DOM.filterPrereq.value === 'yes') filterConditions += " AND c2.has_prerequisites = 1";
-        if (DOM.filterPrereq.value === 'no') filterConditions += " AND (c2.has_prerequisites = 0 OR c2.has_prerequisites IS NULL)";
+        // Filter Button Toggles (Chips, Days, and Course Levels)
+        document.querySelectorAll('.filter-btn, .filter-chip').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const t = e.target;
+                t.classList.toggle('active');
+                
+                if (t.classList.contains('active')) {
+                    t.classList.remove('border-slate-300', 'text-slate-600', 'bg-white', 'hover:bg-slate-50', 'hover:bg-slate-100');
+                    t.classList.add('border-purple-300', 'bg-purple-50', 'text-purple-700');
+                } else {
+                    t.classList.add('border-slate-300', 'text-slate-600', 'bg-white');
+                    t.classList.remove('border-purple-300', 'bg-purple-50', 'text-purple-700');
+                    if (t.classList.contains('filter-chip')) t.classList.add('hover:bg-slate-100');
+                    if (t.classList.contains('filter-btn')) t.classList.add('hover:bg-slate-50');
+                }
+                
+                this.markSearchReady();
+            });
+        });
+    }
 
-        // 6. CR/NC Filter
-        if (DOM.filterCrnc.value === 'crnc') filterConditions += " AND s2.is_credit_no_credit = 1";
+    // Handles dynamically binding the events to the newly generated Major checkboxes
+    bindMajorEvents() {
+        const majorCheckboxes = document.querySelectorAll('.major-checkbox');
+        majorCheckboxes.forEach(cb => {
+            cb.addEventListener('change', (e) => {
+                const target = e.target;
+                if (target.value === 'ALL' && target.checked) {
+                    majorCheckboxes.forEach(box => { if (box.value !== 'ALL') box.checked = false; });
+                } else if (target.value !== 'ALL' && target.checked) {
+                    document.querySelector('.major-checkbox[value="ALL"]').checked = false;
+                }
+                this.markSearchReady();
+            });
+        });
+    }
 
-        // 7. Meeting Days Filter
-        const checkedDays = Array.from(DOM.dayFilters).filter(cb => cb.checked).map(cb => cb.value);
-        if (checkedDays.length > 0) {
-            const daySql = checkedDays.map(day => `(',' || m2.days || ',') LIKE '%,${day},%'`).join(" OR ");
-            filterConditions += ` AND (${daySql})`;
-        }
-        
-        // ------------------------------------------
-        // C. Construct the Final Query
-        // ------------------------------------------
-        const sqlString = `
-            SELECT 
-                c.course_id, c.course_prefix, c.course_number, c.course_title, c.college, c.notes as course_notes, c.year, c.quarter,
-                s.section_id, s.section_type, s.status, s.enrolled, s.enrollment_limit, s.sln, s.credits_min, s.credits_max, s.notes as section_notes, s.is_credit_no_credit, s.fee,
-                m.meeting_id, m.days, m.start_time, m.end_time, m.building_room, m.instructor
-            FROM courses c
-            LEFT JOIN sections s ON c.course_id = s.course_id
-            LEFT JOIN meetings m ON s.section_id = m.section_id
-            WHERE c.course_id IN (
-                SELECT DISTINCT c2.course_id 
-                FROM courses c2
-                LEFT JOIN sections s2 ON c2.course_id = s2.course_id
-                LEFT JOIN meetings m2 ON s2.section_id = m2.section_id
-                WHERE (
-                    REPLACE(c2.course_prefix || c2.course_number, ' ', '') LIKE ? 
-                    OR c2.course_title LIKE ? 
-                    OR m2.instructor LIKE ?
-                ) ${filterConditions}
-            )
-            ${orderByClause}, s.section_id;
-        `;
-
+    // Fetches unique prefixes from the SQLite database and populates the UI
+    async populateDynamicMajors() {
         try {
-            const stmt = db.prepare(sqlString);
-            stmt.bind([spacelessQuery, safeQuery, safeQuery]);
+            const majors = await this.db.getUniqueMajors();
             
-            const coursesMap = new Map();
-            while (stmt.step()) {
-                const row = stmt.getAsObject();
-                
-                if (!coursesMap.has(row.course_id)) {
-                    coursesMap.set(row.course_id, { ...row, sections: new Map() });
-                }
-                const course = coursesMap.get(row.course_id);
-                
-                if (row.section_id && !course.sections.has(row.section_id)) {
-                    course.sections.set(row.section_id, { ...row, meetings: [] });
-                }
-                if (row.meeting_id) {
-                    course.sections.get(row.section_id).meetings.push(row);
-                }
+            const clearBtn = document.getElementById('clear-majors');
+            const container = clearBtn.parentElement.parentElement.querySelector('.max-h-36');
+            
+            let html = `<label class="flex items-center gap-2 cursor-pointer hover:bg-slate-200 p-1 rounded transition-colors"><input type="checkbox" class="accent-purple-600 major-checkbox" value="ALL" checked> All Departments</label>`;
+            
+            majors.forEach(m => {
+                const displayName = m.name ? `${m.prefix} - ${m.name}` : m.prefix;
+                html += `<label class="flex items-center gap-2 cursor-pointer hover:bg-slate-200 p-1 rounded transition-colors"><input type="checkbox" class="accent-purple-600 major-checkbox" value="${m.prefix}"> ${displayName}</label>`;
+            });
+
+            container.innerHTML = html;
+            this.bindMajorEvents();
+            
+            const majorFilterInput = clearBtn.parentElement.parentElement.querySelector('input[type="text"]');
+            if (majorFilterInput) {
+                majorFilterInput.addEventListener('input', (e) => {
+                    const term = e.target.value.toLowerCase();
+                    const labels = container.querySelectorAll('label');
+                    labels.forEach(label => {
+                        if (label.querySelector('input').value === 'ALL' || label.textContent.toLowerCase().includes(term)) {
+                            label.style.display = 'flex';
+                        } else {
+                            label.style.display = 'none';
+                        }
+                    });
+                });
             }
-            stmt.free();
 
-            const courseList = Array.from(coursesMap.values()).map(c => ({
-                ...c,
-                sections: Array.from(c.sections.values())
-            }));
-
-            renderResults(courseList);
-
-        } catch (err) {
-            console.error("Search error:", err);
-            DOM.results.innerHTML = `<p class="text-center text-red-500 py-8">An error occurred while searching.</p>`;
+        } catch (error) {
+            console.error("Failed to load dynamic majors:", error);
         }
-    }, 50);
-}
-
-// ==========================================
-// 4. RENDERING & HTML GENERATION
-// ==========================================
-function renderResults(courseList) {
-    if (courseList.length === 0) {
-        DOM.results.innerHTML = `<p class="text-center text-gray-500 py-12 text-lg">No courses found matching your search and filters.</p>`;
-        return;
     }
 
-    DOM.toolbar.classList.remove('hidden');
-    let html = "";
+    // Scrape every filter on the page
+    harvestFilters() {
+        const attributes = Array.from(document.querySelectorAll('.filter-chip.active')).map(btn => btn.dataset.attr);
+        const activeDays = Array.from(document.querySelectorAll('.day-btn.active')).map(btn => btn.dataset.day);
+        const activeLevels = Array.from(document.querySelectorAll('.level-btn.active')).map(btn => btn.dataset.level);
+        const activeSectionTypes = Array.from(document.querySelectorAll('.type-checkbox:checked')).map(cb => cb.dataset.type);
+        const activeMajors = Array.from(document.querySelectorAll('.major-checkbox:checked'))
+                                  .map(cb => cb.value)
+                                  .filter(val => val !== 'ALL');
+        
+        const dayModeBtn = document.querySelector('.mode-btn.active');
+        const dayMode = dayModeBtn ? dayModeBtn.dataset.mode : 'include';
 
-    // Specific Quarter Colors mapping (using your provided hex codes)
-    const quarterColors = {
-        'AUT': { bg: '#ffcccc', text: '#660000', border: '#ff9999' },
-        'SPR': { bg: '#ccffcc', text: '#004d00', border: '#99ff99' },
-        'WIN': { bg: '#99ccff', text: '#002266', border: '#66b3ff' },
-        'SUM': { bg: '#ffffcc', text: '#4d4d00', border: '#ffff99' }
-    };
+        const tbaBtn = document.querySelector('.tba-btn.active');
+        const tbaMode = tbaBtn ? tbaBtn.dataset.tba : 'include';
 
-    courseList.forEach(course => {
-        let sectionsHtml = "";
-        course.sections.forEach(section => {
-            let meetingsHtml = section.meetings.map(m => `
-                <div class="grid grid-cols-3 gap-4 text-sm text-gray-700 mt-2">
-                    <div>🕒 ${m.days || 'TBA'} ${m.start_time ? m.start_time + '-' + m.end_time : ''}</div>
-                    <div>📍 ${m.building_room || 'TBA'}</div>
-                    <div class="truncate" title="${m.instructor}">👨‍🏫 ${m.instructor || 'Staff'}</div>
-                </div>
-            `).join('');
+        return {
+            majors: activeMajors,
+            attributes: attributes,
+            daysInclude: dayMode === 'include' ? activeDays : [],
+            daysExclude: dayMode === 'exclude' ? activeDays : [],
+            tbaMode: tbaMode,
+            levels: activeLevels,
+            sectionTypes: activeSectionTypes,
+            minCredits: document.getElementById('min-credits').value,
+            maxCredits: document.getElementById('max-credits').value,
+            timeScope: document.getElementById('time-scope').value,
+            startTime: document.getElementById('start-time').value,
+            endTime: document.getElementById('end-time').value,
+            sortBy: this.sortSelect.value
+        };
+    }
+
+    markSearchReady() {
+        this.searchBtn.disabled = false;
+        this.searchBtn.classList.remove('bg-slate-300', 'text-slate-500', 'cursor-not-allowed');
+        this.searchBtn.classList.add('bg-purple-600', 'text-white', 'hover:bg-purple-700', 'shadow-md');
+    }
+
+    async init() {
+        lucide.createIcons();
+        try {
+            await this.db.init();
+            this.ui.setReadyStatus();
             
-            let creditsText = section.credits_min !== null ? 
-                (section.credits_min === section.credits_max ? `${section.credits_min} CR` : `${section.credits_min}-${section.credits_max} CR`) : '';
-            let feeText = section.fee ? `<span class="ml-2 text-red-600 font-bold">$${section.fee} Fee</span>` : '';
-            let crncText = section.is_credit_no_credit ? `<span class="ml-2 px-1.5 py-0.5 bg-yellow-100 text-yellow-800 rounded font-bold">CR/NC</span>` : '';
+            await this.populateDynamicMajors();
+            
+            this.searchInput.disabled = false;
+            this.searchInput.value = ""; 
 
-            sectionsHtml += `
-                <div class="bg-white border border-gray-200 rounded-lg p-4 mb-3 shadow-sm">
-                    <div class="flex flex-wrap justify-between items-center mb-2 pb-2 border-b border-gray-100 gap-2">
-                        <div class="font-bold flex flex-wrap items-center gap-3">
-                            <span>Section ${section.section_id.split('-').pop()}</span>
-                            <span class="px-2 py-0.5 bg-gray-100 text-gray-600 text-xs rounded">${section.section_type || 'LC'}</span>
-                            <span class="text-sm font-normal text-gray-500">SLN: ${section.sln}</span>
-                            <span class="text-sm text-gray-600 font-medium ml-2">${creditsText}${feeText}${crncText}</span>
-                        </div>
-                        <div class="text-sm">
-                            <span class="text-gray-500">${section.enrolled} / ${section.enrollment_limit}</span>
-                        </div>
-                    </div>
-                    ${meetingsHtml}
-                    ${section.section_notes ? `<div class="mt-3 text-xs text-gray-600 bg-yellow-50 border border-yellow-100 p-2 rounded leading-relaxed font-mono">Note: ${section.section_notes}</div>` : ''}
-                </div>
-            `;
-        });
+        } catch (error) {
+            this.ui.setErrorStatus("DB Connection Failed");
+            console.error(error);
+        }
+    }
 
-        // Resolve Color Badge
-        const activeColor = quarterColors[course.quarter] || { bg: '#f3f4f6', text: '#1f2937', border: '#e5e7eb' };
-
-        html += `
-            <details class="group bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-                <summary class="cursor-pointer p-6 hover:bg-gray-50 flex justify-between items-center transition-colors">
-                    <div>
-                        <div class="flex items-center gap-3 mb-1">
-                            <h2 class="text-xl font-bold text-gray-900">${course.course_prefix} ${course.course_number}</h2>
-                            <span class="px-2.5 py-1 text-xs font-bold rounded border" style="background-color: ${activeColor.bg}; color: ${activeColor.text}; border-color: ${activeColor.border};">
-                                ${course.quarter} ${course.year}
-                            </span>
-                        </div>
-                        <p class="text-lg text-gray-700">${course.course_title}</p>
-                        <p class="text-sm text-purple-700 font-medium mt-1">${course.college}</p>
-                    </div>
-                    <div class="text-gray-400 group-open:rotate-180 transition-transform duration-200">▼</div>
-                </summary>
-                <div class="p-6 pt-2 bg-gray-50 border-t border-gray-100">
-                    ${course.course_notes ? `<div class="text-sm text-gray-600 bg-blue-50 border border-blue-100 p-3 rounded mb-4 font-mono">${course.course_notes}</div>` : ''}
-                    ${sectionsHtml}
-                </div>
-            </details>
-        `;
-    });
-
-    DOM.results.innerHTML = html;
+    async executeSearch() {
+        this.currentQuery = this.searchInput.value.trim();
+        
+        this.searchBtn.disabled = true;
+        this.searchBtn.classList.add('bg-slate-300', 'text-slate-500', 'cursor-not-allowed');
+        this.searchBtn.classList.remove('bg-purple-600', 'text-white', 'hover:bg-purple-700', 'shadow-md');
+        
+        this.ui.showLoading();
+        
+        try {
+            const activeFilters = this.harvestFilters();
+            const results = await this.db.searchCourses(this.currentQuery, activeFilters);
+            
+            this.ui.renderCourses(results);
+            
+            // Respect the explicit expand/collapse state, or auto-expand if the result is tiny
+            if (this.isExpanded) {
+                this.ui.toggleAll(true);
+            } else if (results.length > 0 && results.length <= 3) {
+                this.ui.toggleAll(true);
+            }
+        } catch (error) {
+            console.error("Search failed:", error);
+            this.ui.container.innerHTML = `<div class="text-red-500 p-8 text-center font-bold">Query Error Occurred.</div>`;
+        }
+    }
 }
 
-// ==========================================
-// 5. EVENT LISTENERS
-// ==========================================
-window.toggleAll = (expand) => {
-    document.querySelectorAll('details').forEach(detail => detail.open = expand);
-};
-
-// Trigger search when core inputs change
-DOM.searchBtn.addEventListener('click', executeSearch);
-DOM.searchIn.addEventListener('keypress', (e) => {
-    if (e.key === 'Enter') executeSearch();
+document.addEventListener('DOMContentLoaded', () => {
+    const app = new App();
+    app.init();
 });
-DOM.sortSel.addEventListener('change', () => {
-    if (DOM.searchIn.value.trim().length >= 2) executeSearch();
-});
-
-// Automatically refresh search if user changes a filter while searching
-[
-    DOM.filterLevel, 
-    DOM.filterCreditsMin, 
-    DOM.filterCreditsMax, 
-    DOM.filterType, 
-    DOM.filterFee, 
-    DOM.filterPrereq, 
-    DOM.filterCrnc, 
-    ...DOM.dayFilters
-].forEach(el => {
-    // For inputs where typing occurs, we use 'input' rather than just 'change'
-    el.addEventListener(el.type === 'number' ? 'input' : 'change', () => {
-        if (DOM.searchIn.value.trim().length >= 2) executeSearch();
-    });
-});
-
-// Start everything up
-loadDatabase();
