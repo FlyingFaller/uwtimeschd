@@ -25,6 +25,13 @@ def normalize_schedule_data(courses: list[dict]) -> list[dict]:
             credits_min, credits_max, sec_type = clean_credits(sec.get('credits'))
             enrolled, limit, is_est = clean_enrollment(sec.get('enrollment_limit'))
             is_primary_section = (sec_type is None)
+
+            restr = clean_restrictions(sec.get('restrictions'))
+            if sec_type == 'IS' or restr.get('independent_study'):
+                restr['independent_study'] = True
+                sec_type = 'IS'
+            elif is_primary_section and sec_type is None:
+                sec_type = 'LC'
             
             cleaned_sec = {
                 'section_id'         : sec.get('section_id'),
@@ -39,7 +46,7 @@ def normalize_schedule_data(courses: list[dict]) -> list[dict]:
                 'is_limit_estimate'  : is_est,
                 'is_credit_no_credit': sec.get('grades') == 'CR/NC',
                 'fee'                : clean_fee(sec.get('fee')),
-                'restrictions'       : clean_restrictions(sec.get('restrictions')),
+                'restrictions'       : restr,
                 'attributes'         : clean_other(sec.get('other')),
                 'meetings'           : [],
                 'notes'              : sec.get('notes')
