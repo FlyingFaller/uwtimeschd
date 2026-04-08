@@ -13,12 +13,12 @@ if __name__ == "__main__":
         # start=("AUT", 2021),
         # end=("AUT", 2021),
         target_majors=["aa", "meche"], # Aeronautics and Mechanical Engineering
-        invalidate=False
+        invalidate=True
     )
 
     print("\n--- 2. Starting Scraper Worker ---")
     # Pull up to 5 tasks from the queue
-    tasks = get_pending_tasks(db_path="data/queue.db", limit=50)
+    tasks = get_pending_tasks(db_path="data/queue.db", limit=None)
     
     if not tasks:
         print("No pending tasks found in the queue!")
