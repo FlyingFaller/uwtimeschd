@@ -123,7 +123,9 @@ def extract_restrictions(chunk):
     return None
 
 def extract_sln(chunk):
-    match = re.search(r'(?:^|\s+)(\d{4,5})(?:\s+|$)', chunk)
+    # Relaxed regex: The '>' character (Add Code Required) is often glued to the SLN. 
+    # By removing the strict whitespace boundaries, we guarantee the 4-5 digit SLN is extracted.
+    match = re.search(r'(\d{4,5})', chunk)
     return match.group(1) if match else None
 
 def extract_section_id(chunk):
