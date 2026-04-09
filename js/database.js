@@ -5,6 +5,7 @@ export class DatabaseManager {
     constructor(dbPath = "data/schedules.db") {
         this.dbPath = dbPath;
         this.worker = null;
+        this._spacelessMajorMap = null; 
     }
 
     async init() {
@@ -39,197 +40,224 @@ export class DatabaseManager {
     async getUniqueMajors() {
         if (!this.worker) throw new Error("Database not initialized");
         
+        const sql = `SELECT course_prefix, major_name FROM majors ORDER BY course_prefix ASC`;
+        const rows = await this.worker.db.query(sql);
+        
+        return rows.map(r => {
+            const prefix = r.course_prefix.trim();
+            const spaceless = prefix.replace(/\s+/g, '');
+            let name = r.major_name ? r.major_name.trim() : '';
+            
+            if (spaceless !== prefix) {
+                name = name ? `${name} [${spaceless}]` : `[${spaceless}]`;
+            }
+            
+            return { prefix, name };
+        });
+    }
+
+    async _getSpacelessMajorMap() {
+        if (this._spacelessMajorMap) return this._spacelessMajorMap;
         try {
-            const sql = `SELECT course_prefix, major_name FROM majors ORDER BY course_prefix ASC`;
-            const rows = await this.worker.db.query(sql);
-            return rows.map(r => ({ 
-                prefix: r.course_prefix.trim(),
-                name: r.major_name ? r.major_name.trim() : ''
-            }));
-        } catch (err) {
-            console.warn("Dedicated 'majors' table not found. Falling back to Full Table Scan of 'courses'.");
-            const fallbackSql = `SELECT DISTINCT course_prefix, major_name FROM courses WHERE course_prefix IS NOT NULL AND course_prefix != '' ORDER BY course_prefix ASC`;
-            const rows = await this.worker.db.query(fallbackSql);
-            return rows.map(r => ({ prefix: r.course_prefix.trim(), name: r.major_name ? r.major_name.trim() : '' }));
+            const majors = await this.getUniqueMajors();
+            this._spacelessMajorMap = {};
+            majors.forEach(m => {
+                const official = m.prefix.toUpperCase();
+                const spaceless = official.replace(/\s+/g, '');
+                if (spaceless !== official) {
+                    this._spacelessMajorMap[spaceless] = official; 
+                }
+            });
+            return this._spacelessMajorMap;
+        } catch (e) {
+            return {};
         }
     }
 
-    async searchCourses(searchTerm, filters = {}) {
-        if (!this.worker) throw new Error("Database not initialized");
+    _getDaysMask(daysList) {
+        let mask = 0;
+        const map = {'M': 1, 'T': 2, 'W': 4, 'Th': 8, 'F': 16, 'S': 32, 'Su': 64};
+        daysList.forEach(d => { if (map[d]) mask |= map[d]; });
+        return mask;
+    }
 
-        const safeTerm = searchTerm.replace(/'/g, "''").toUpperCase();
+    _getAttributesMask(attributesList) {
+        let mask = 0;
+        const map = {
+            'W': 1, 'H': 2, 'J': 4, 'O': 8, 'A': 16, 'B': 32, 'E': 64, 'S': 128,
+            'R': 256, '%': 512, '#': 1024, 'Restricted': 2048, 'Add Code': 4096, 'CR/NC': 8192
+        };
+        attributesList.forEach(a => { if (map[a]) mask |= map[a]; });
+        return mask;
+    }
+
+    _sanitizeFts(term, majorMap = {}) {
+        let clean = term.replace(/['"*:^()\[\]{}]/g, ' ').trim().toUpperCase();
+        if (!clean) return "";
+        
+        clean = clean.replace(/([a-zA-Z])(\d)/g, '$1 $2').replace(/(\d)([a-zA-Z])/g, '$1 $2');
+        
+        const tokens = clean.split(/\s+/);
+        const queryParts = tokens.map(word => {
+            if (majorMap[word]) {
+                return `("${word}"* OR "${majorMap[word]}")`;
+            }
+            if (/^\d+$/.test(word)) {
+                return `"${word}"`; 
+            }
+            return `"${word}"*`;
+        });
+        
+        return queryParts.join(' AND ');
+    }
+
+    async searchCourses(searchTerm, filters = {}, limit = 25) {
+        if (!this.worker) throw new Error("Database not initialized");
 
         const {
             majors = [],
             attributes = [],
             daysInclude = [],
             daysExclude = [],
+            quarters = [], // NEW: Standalone quarter filters
             tbaMode = "include",
             levels = [],
             sectionTypes = [],
             minCredits = "",
             maxCredits = "",
-            timeScope = "all",
+            minTermCode = null,
+            maxTermCode = null,
+            timeScope = "primary",
             startTime = "",
             endTime = "",
             sortBy = 'newest'
         } = filters;
 
-        let whereClauses = [];
+        const majorMap = await this._getSpacelessMajorMap();
 
-        // 1. Text Search
-        if (safeTerm) {
-            whereClauses.push(`(
-                c.course_prefix LIKE '%${safeTerm}%' 
-                OR c.course_number LIKE '%${safeTerm}%' 
-                OR c.course_title LIKE '%${safeTerm}%'
-                OR s.sln LIKE '%${safeTerm}%'
-                OR m.instructor LIKE '%${safeTerm}%'
-            )`);
+        let baseWhere = ["1=1"];
+        let exceptWhere = [];
+
+        const ftsTerm = this._sanitizeFts(searchTerm, majorMap);
+        if (ftsTerm) {
+            baseWhere.push(`course_id IN (SELECT course_id FROM omni_search WHERE search_text MATCH '${ftsTerm}')`);
         }
 
-        // 2. Majors / Departments Filter
         if (majors.length > 0) {
             const majorList = majors.map(m => `'${m}'`).join(', ');
-            whereClauses.push(`c.course_prefix IN (${majorList})`);
+            baseWhere.push(`course_prefix IN (${majorList})`);
         }
 
-        // 3. Course Levels
         if (levels.length > 0) {
             const levelConds = levels.map(lvl => {
-                if (lvl === '800') return `c.course_number >= 800`;
+                if (lvl === '800') return `course_number >= 800`;
                 const lower = parseInt(lvl);
-                const upper = lower + 99;
-                return `(c.course_number >= ${lower} AND c.course_number <= ${upper})`;
+                return `(course_number >= ${lower} AND course_number <= ${lower + 99})`;
             });
-            whereClauses.push(`(${levelConds.join(' OR ')})`);
+            baseWhere.push(`(${levelConds.join(' OR ')})`);
         }
 
-        // 4. Credits Min / Max
-        if (minCredits !== "") {
-            whereClauses.push(`s.credits_min >= ${parseFloat(minCredits)}`);
-        }
-        if (maxCredits !== "") {
-            whereClauses.push(`s.credits_max <= ${parseFloat(maxCredits)}`);
+        // Apply Historical Term Bounds
+        if (minTermCode) baseWhere.push(`term_code >= ${minTermCode}`);
+        if (maxTermCode) baseWhere.push(`term_code <= ${maxTermCode}`);
+
+        // NEW: Apply Modulo-based Quarter Isolation Filter
+        if (quarters.length > 0) {
+            const qMap = { 'WIN': 1, 'SPR': 2, 'SUM': 3, 'AUT': 4 };
+            const qNums = quarters.map(q => qMap[q]).filter(n => n);
+            if (qNums.length > 0) {
+                baseWhere.push(`(term_code % 10) IN (${qNums.join(',')})`);
+            }
         }
 
-        // 5. Section Types
         if (sectionTypes.length > 0) {
             const safeTypes = sectionTypes.map(t => `'${t.replace(/'/g, '')}'`).join(', ');
-            whereClauses.push(`s.section_type IN (${safeTypes})`);
+            baseWhere.push(`section_type IN (${safeTypes})`);
         }
+        if (minCredits !== "") baseWhere.push(`credits_min >= ${parseFloat(minCredits)}`);
+        if (maxCredits !== "") baseWhere.push(`credits_max <= ${parseFloat(maxCredits)}`);
 
-        // 6. Attributes & Grading (STRICT INTEGER LOOKUPS)
-        const attrMap = {
-            'W': "s.writing = 1",
-            'H': "s.honors = 1",
-            'J': "s.jointly_offered = 1",
-            'O': "s.online = 1",
-            'A': "s.asynchronous = 1",
-            'B': "s.hybrid = 1",
-            'E': "s.community_engaged = 1",
-            'S': "s.service_learning = 1",
-            'R': "s.research = 1",
-            '%': "s.new_course = 1",
-            '#': "s.no_financial_aid = 1",
-            'Restricted': "s.restricted_registration = 1",
-            'Add Code': "s.add_code_required = 1",
-            'CR/NC': "s.is_credit_no_credit = 1"
-        };
-        for (const attr of attributes) {
-            if (attrMap[attr]) whereClauses.push(attrMap[attr]);
-        }
-
-        // 7 & 8. Negative EXCLUSIONS via EXCEPT clause
-        let violatingClauses = [];
-
-        // Strict Fee Exclusion: Uses the confirmed 'fee' integer column
-        if (attributes.includes('No Extra Fees')) {
-            violatingClauses.push(`(s.fee > 0)`);
-        }
-
-        // TBA Handling: Uses the confirmed 'is_tba' integer column
-        if (tbaMode === 'exclude') {
-            violatingClauses.push(`(m.is_tba = 1)`);
-        }
-
-        // Time Violations
-        if (startTime !== "") {
-            const minInt = parseInt(startTime.replace(':', ''));
-            let cond = `(m.start_time < ${minInt})`;
-            if (tbaMode === 'include') cond = `(m.is_tba = 0 AND ${cond})`;
-            violatingClauses.push(cond);
-        }
-        if (endTime !== "") {
-            const maxInt = parseInt(endTime.replace(':', ''));
-            let cond = `(m.end_time > ${maxInt})`;
-            if (tbaMode === 'include') cond = `(m.is_tba = 0 AND ${cond})`;
-            violatingClauses.push(cond);
-        }
-
-        // Day Violations: Boolean column lookups
         if (daysInclude.length > 0) {
-            const missingDaysConds = daysInclude.map(d => `m.meets_${d.toLowerCase()} = 0`);
-            let cond = `(${missingDaysConds.join(' OR ')})`;
-            if (tbaMode === 'include') cond = `(m.is_tba = 0 AND ${cond})`;
-            violatingClauses.push(cond);
+            const incMask = this._getDaysMask(daysInclude);
+            baseWhere.push(`(days_mask & ${incMask}) = ${incMask}`);
+        }
+        
+        const attrMask = this._getAttributesMask(attributes);
+        if (attrMask > 0) {
+            baseWhere.push(`(attributes_mask & ${attrMask}) = ${attrMask}`);
+        }
+
+        let timeScopeCond = timeScope === 'primary' ? "is_primary = 1 AND " : "";
+
+        if (tbaMode === 'exclude') {
+            exceptWhere.push(`${timeScopeCond}is_tba = 1`);
         }
         
         if (daysExclude.length > 0) {
-            const presentDaysConds = daysExclude.map(d => `m.meets_${d.toLowerCase()} = 1`);
-            let cond = `(${presentDaysConds.join(' OR ')})`;
-            if (tbaMode === 'include') cond = `(m.is_tba = 0 AND ${cond})`;
-            violatingClauses.push(cond);
+            const excMask = this._getDaysMask(daysExclude);
+            exceptWhere.push(`${timeScopeCond}(days_mask & ${excMask}) > 0`);
         }
 
-        // EXCEPT clause
-        let exceptClause = "";
-        if (violatingClauses.length > 0) {
-            let scopeCondition = "1=1";
-            if (timeScope === 'primary') {
-                scopeCondition = "s.is_primary = 1";
-            }
-            
-            // CRITICAL FIX: Combine the main search anchors (major, text, etc.) with the exclusion logic.
-            // This prevents the EXCEPT query from performing a global table scan.
-            const exceptWhereClauses = [
-                ...whereClauses,
-                `(${scopeCondition})`,
-                `(${violatingClauses.join(' OR ')})`
-            ];
+        if (startTime !== "") {
+            exceptWhere.push(`${timeScopeCond}(is_tba = 0 AND start_time < ${parseInt(startTime.replace(':', ''))})`);
+        }
+        if (endTime !== "") {
+            exceptWhere.push(`${timeScopeCond}(is_tba = 0 AND end_time > ${parseInt(endTime.replace(':', ''))})`);
+        }
 
-            exceptClause = `
-                EXCEPT
-                SELECT c.course_id
-                FROM courses c
-                JOIN sections s ON c.course_id = s.course_id
-                JOIN meetings m ON s.section_id = m.section_id
-                WHERE ${exceptWhereClauses.join(' AND ')}
+        if (attributes.includes('No Extra Fees')) {
+            exceptWhere.push(`${timeScopeCond}fee > 0`);
+        }
+
+        let orderClause = "ORDER BY term_code DESC, course_prefix ASC, course_number ASC";
+        if (sortBy === 'oldest') orderClause = "ORDER BY term_code ASC, course_prefix ASC, course_number ASC";
+        if (sortBy === 'course') orderClause = "ORDER BY course_prefix ASC, course_number ASC, term_code DESC";
+
+        let sieveSql = `
+            SELECT DISTINCT course_id, term_code, course_prefix, course_number 
+            FROM filter_discovery 
+            WHERE ${baseWhere.join(' AND ')}
+        `;
+
+        if (exceptWhere.length > 0) {
+            sieveSql += ` 
+                EXCEPT 
+                SELECT course_id, term_code, course_prefix, course_number 
+                FROM filter_discovery 
+                WHERE (${exceptWhere.join(') OR (')})
             `;
         }
+        sieveSql += ` ${orderClause}`;
 
-        const whereString = whereClauses.length > 0 ? `WHERE ${whereClauses.join(' AND ')}` : "";
+        const sieveRows = await this.worker.db.query(sieveSql);
+        const finalIds = sieveRows.map(row => row.course_id);
 
-        // CTE Sorting
-        let orderByCTE = "ORDER BY c.course_prefix ASC, c.course_number ASC";
-        if (sortBy === 'newest') {
-            orderByCTE = "ORDER BY c.year DESC, CASE c.quarter WHEN 'AUT' THEN 4 WHEN 'SUM' THEN 3 WHEN 'SPR' THEN 2 WHEN 'WIN' THEN 1 ELSE 0 END DESC, c.course_prefix ASC, c.course_number ASC";
-        } else if (sortBy === 'oldest') {
-            orderByCTE = "ORDER BY c.year ASC, CASE c.quarter WHEN 'WIN' THEN 1 WHEN 'SPR' THEN 2 WHEN 'SUM' THEN 3 WHEN 'AUT' THEN 4 ELSE 5 END ASC, c.course_prefix ASC, c.course_number ASC";
+        let pageIds = [];
+        if (limit === 'all' || limit < 0) {
+            pageIds = finalIds;
+        } else {
+            pageIds = finalIds.slice(0, limit);
         }
+        
+        const structuredResults = await this.hydrateCourses(pageIds, sortBy);
+        
+        structuredResults.totalMatches = finalIds.length;
+        structuredResults.allIds = finalIds;
+        
+        return structuredResults;
+    }
 
-        const mainOrderBy = `${orderByCTE}, s.section_id ASC`;
+    async hydrateCourses(idArray, sortBy = 'newest') {
+        if (!idArray || idArray.length === 0) return [];
+        if (!this.worker) throw new Error("Database not initialized");
 
-        // Using SELECT DISTINCT c.course_id for the pool to avoid GROUP BY overhead
-        const sql = `
-            WITH MatchingCourses AS (
-                SELECT DISTINCT c.course_id
-                FROM courses c
-                LEFT JOIN sections s ON c.course_id = s.course_id
-                LEFT JOIN meetings m ON s.section_id = m.section_id
-                ${whereString}
-                ${exceptClause}
-            )
+        let orderClause = "ORDER BY term_code DESC, course_prefix ASC, course_number ASC";
+        if (sortBy === 'oldest') orderClause = "ORDER BY term_code ASC, course_prefix ASC, course_number ASC";
+        if (sortBy === 'course') orderClause = "ORDER BY course_prefix ASC, course_number ASC, term_code DESC";
+
+        const idList = idArray.map(id => `'${id}'`).join(',');
+        
+        const hydrateSql = `
             SELECT 
                 c.course_id, c.course_prefix, c.course_number, c.course_title, c.quarter, c.year, c.notes as course_notes,
                 s.section_id, s.is_primary, s.sln, s.section_type, s.credits_min, s.credits_max,
@@ -239,14 +267,14 @@ export class DatabaseManager {
                 s.community_engaged, s.service_learning, s.research, s.new_course, s.no_financial_aid,
                 m.meeting_id, m.days, m.start_time, m.end_time, m.building_room, m.instructor
             FROM courses c
-            JOIN MatchingCourses mc ON c.course_id = mc.course_id
             LEFT JOIN sections s ON c.course_id = s.course_id
             LEFT JOIN meetings m ON s.section_id = m.section_id
-            ${mainOrderBy}
+            WHERE c.course_id IN (${idList})
+            ${orderClause}, s.section_id ASC, m.meeting_id ASC
         `;
 
-        const rows = await this.worker.db.query(sql);
-        return this._shapeDataForUI(rows);
+        const hydrateRows = await this.worker.db.query(hydrateSql);
+        return this._shapeDataForUI(hydrateRows);
     }
 
     _shapeDataForUI(rows) {
@@ -323,10 +351,10 @@ export class DatabaseManager {
                     }
                     
                     section.meetingsMap.set(row.meeting_id, {
-                        days: row.days ? row.days.replace(/,/g, '') : 'TBA',
-                        time: timeStr || '-',
+                        days: row.days || 'TBA',
+                        time: timeStr || '',
                         bldg: row.building_room || 'TBA',
-                        instructor: row.instructor || 'Staff'
+                        instructor: row.instructor || ''
                     });
                 }
             }

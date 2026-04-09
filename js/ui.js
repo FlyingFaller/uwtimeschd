@@ -30,24 +30,41 @@ export class UIManager {
         lucide.createIcons();
     }
 
+    showLoadingMore(show) {
+        const indicator = document.getElementById('loading-more-indicator');
+        if (!indicator && show && this.container) {
+            this.container.insertAdjacentHTML('beforeend', `
+                <div id="loading-more-indicator" class="text-center py-6 text-slate-500 font-medium bg-slate-50 rounded-lg mt-4 border border-slate-200">
+                    <i data-lucide="loader" class="w-5 h-5 inline-block animate-spin mr-2"></i> Fetching more courses...
+                </div>
+            `);
+            if (window.lucide) lucide.createIcons();
+        } else if (indicator && !show) {
+            indicator.remove();
+        }
+    }
+
     toggleAll(expand) {
         document.querySelectorAll('details.course-card').forEach(detail => detail.open = expand);
     }
 
     getQuarterColorClasses(quarterStr) {
         const upper = quarterStr.toUpperCase();
-        if (upper.includes("AUT")) return "bg-orange-100 text-orange-800 border-orange-200";
-        if (upper.includes("WIN")) return "bg-sky-100 text-sky-800 border-sky-200";
-        if (upper.includes("SPR")) return "bg-emerald-100 text-emerald-800 border-emerald-200";
-        if (upper.includes("SUM")) return "bg-amber-100 text-amber-800 border-amber-200";
-        return "bg-slate-100 text-slate-800 border-slate-200";
+        if (upper.includes("AUT")) return "bg-[#ffcccc] text-red-900 border-red-300";
+        if (upper.includes("WIN")) return "bg-[#99ccff] text-blue-900 border-blue-300";
+        if (upper.includes("SPR")) return "bg-[#ccffcc] text-green-900 border-green-300";
+        if (upper.includes("SUM")) return "bg-[#ffffcc] text-yellow-900 border-yellow-300";
+        return "bg-slate-100 text-slate-800 border-slate-300";
     }
 
-    // Exact render function preserved from demo.html
-    renderCourses(courses) {
-        this.resultCount.innerText = courses.length;
+    // Exact render function preserved, updated with append flag and sentinel
+    renderCourses(courses, append = false) {
+        // Update Total Results Counter (Total FTS matches, not just the hydrated slice)
+        if (this.resultCount && courses.totalMatches !== undefined) {
+            this.resultCount.innerText = courses.totalMatches;
+        }
 
-        if (courses.length === 0) {
+        if (!append && courses.length === 0) {
             this.container.innerHTML = `
                 <div class="text-center py-20">
                     <i data-lucide="search-x" class="w-12 h-12 text-slate-300 mx-auto mb-3"></i>
@@ -66,7 +83,7 @@ export class UIManager {
                 let typeColor = sec.type === 'LC' ? 'bg-blue-100 text-blue-800' : (sec.type === 'QZ' ? 'bg-orange-100 text-orange-800' : (sec.type === 'IS' ? 'bg-purple-100 text-purple-800' : 'bg-slate-100 text-slate-800'));
                 let typeTooltip = this.typeTitles[sec.type] || sec.type;
                 
-                let rowBgClass = sec.isPrimary ? 'bg-slate-50 hover:bg-slate-100' : 'bg-white hover:bg-slate-50';
+                let rowBgClass = sec.isPrimary ? 'bg-slate-100 hover:bg-slate-200' : 'bg-white hover:bg-slate-50';
                 let idTextClass = sec.isPrimary ? 'text-slate-600' : 'text-slate-400';
                 
                 let daysHtml = `<div class="space-y-1">` + sec.meetings.map(m => `<div>${m.days}</div>`).join('') + `</div>`;
@@ -141,7 +158,7 @@ export class UIManager {
             const qColor = this.getQuarterColorClasses(course.quarter);
 
             html += `
-                <details class="course-card group bg-white border border-slate-300 rounded-lg shadow-sm overflow-hidden">
+                <details class="course-card group bg-white border border-slate-300 rounded-lg shadow-sm overflow-hidden mb-4">
                     <summary class="cursor-pointer p-4 border-b border-slate-200 bg-slate-50/50 hover:bg-slate-100 flex flex-col md:flex-row md:items-center justify-between gap-4 transition-colors">
                         <div class="flex items-center gap-3">
                             <h2 class="text-xl font-extrabold text-slate-900 tracking-tight flex items-center gap-2">
@@ -190,7 +207,18 @@ export class UIManager {
             `;
         });
 
-        this.container.innerHTML = html;
+        // DOM Manipulation: Append or Overwrite
+        if (append) {
+            const oldSentinel = document.getElementById('scroll-sentinel');
+            if (oldSentinel) oldSentinel.remove();
+            
+            this.container.insertAdjacentHTML('beforeend', html);
+        } else {
+            this.container.innerHTML = html;
+        }
+
+        // Add intersection observer target for next page
+        this.container.insertAdjacentHTML('beforeend', '<div id="scroll-sentinel" class="h-12 w-full"></div>');
         lucide.createIcons();
     }
 }
