@@ -13,7 +13,7 @@ if __name__ == "__main__":
         # start=("AUT", 2021),
         # end=("AUT", 2021),
         target_majors=["aa", "meche"], # Aeronautics and Mechanical Engineering
-        invalidate=True
+        invalidate=False
     )
 
     print("\n--- 2. Starting Scraper Worker ---")
