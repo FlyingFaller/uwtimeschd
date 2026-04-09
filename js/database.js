@@ -2,7 +2,13 @@ import * as sqljsHttpVfs from "https://esm.sh/sql.js-httpvfs@0.8.12?bundle";
 const createDbWorker = sqljsHttpVfs.createDbWorker || (sqljsHttpVfs.default && sqljsHttpVfs.default.createDbWorker);
 
 export class DatabaseManager {
-    constructor(dbPath = "data/schedules.db") {
+    // constructor(dbPath = "data/schedules.db") {
+    //     this.dbPath = dbPath;
+    //     this.worker = null;
+    //     this._spacelessMajorMap = null; 
+    // }
+
+    constructor(dbPath = "data/config.json") { // Points to the Python-generated manifest
         this.dbPath = dbPath;
         this.worker = null;
         this._spacelessMajorMap = null; 
