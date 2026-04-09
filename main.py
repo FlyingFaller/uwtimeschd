@@ -1,8 +1,10 @@
 from management.fetch import fetch_page
 from management.queue_manager import discover_tasks, get_pending_tasks, mark_task_status
 from management.database_manager import insert_schedule_data
+from management.chunk_db import chunk_database
 from parse.schedule import parse_schedule, parse_major_college
 from parse.normalize import normalize_schedule_data
+import argparse
 
 if __name__ == "__main__":
     
@@ -70,3 +72,15 @@ if __name__ == "__main__":
             print(f"[RETRY] Network issue (Status {status_code}). Marked to retry later.")
             
     print("\n--- Worker Finished ---")
+
+    print("\n--- Chunking Database ---")
+    try:
+        parser = argparse.ArgumentParser(description="Chunk a SQLite DB for sql.js-httpvfs")
+        parser.add_argument("--db", type=str, default="data/schedules.db", help="Path to the SQLite database")
+        parser.add_argument("--size", type=int, default=10, help="Chunk size in MB (default: 10)")
+        
+        args = parser.parse_args()
+        chunk_database(args.db, args.size)
+        print(f"[SUCCESS] Chunked database.")
+    except Exception as e:
+        print(f"[ERROR] Failed to chunk database: {e}")
