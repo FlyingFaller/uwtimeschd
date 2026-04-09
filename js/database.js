@@ -2,13 +2,7 @@ import * as sqljsHttpVfs from "https://esm.sh/sql.js-httpvfs@0.8.12?bundle";
 const createDbWorker = sqljsHttpVfs.createDbWorker || (sqljsHttpVfs.default && sqljsHttpVfs.default.createDbWorker);
 
 export class DatabaseManager {
-    // constructor(dbPath = "data/schedules.db") {
-    //     this.dbPath = dbPath;
-    //     this.worker = null;
-    //     this._spacelessMajorMap = null; 
-    // }
-
-    constructor(dbPath = "data/config.json") { // Points to the Python-generated manifest
+    constructor(dbPath = "data/config.json") { 
         this.dbPath = dbPath;
         this.worker = null;
         this._spacelessMajorMap = null; 
@@ -22,17 +16,50 @@ export class DatabaseManager {
             const wasmUrl = "https://cdn.jsdelivr.net/npm/sql.js-httpvfs@0.8.12/dist/sql-wasm.wasm";
             
             const cacheBuster = `?v=${Date.now()}`;
-            const absoluteDbUrl = new URL(this.dbPath + cacheBuster, window.location.href).toString();
+            // Base URL to the manifest file
+            const manifestBaseUrl = new URL(this.dbPath, window.location.href);
+            const configUrl = new URL(manifestBaseUrl.toString() + cacheBuster).toString();
+
+            // 1. Fetch the exact byte math from Python's config.json
+            const response = await fetch(configUrl);
+            if (!response.ok) throw new Error(`Failed to load db config: ${response.statusText}`);
+            const config = await response.json();
+
+            // 2. Map the Python-generated 'chunks' array to the strict urlPrefix/suffixLength format 
+            // required by the WebAssembly worker
+            let urlPrefix = "schedules.db.";
+            let suffixLength = 2;
+            
+            if (config.chunks && config.chunks.length > 0) {
+                const firstChunk = config.chunks[0];
+                const match = firstChunk.match(/^(.*)(\d{2})$/);
+                if (match) {
+                    urlPrefix = match[1];
+                    suffixLength = match[2].length;
+                }
+            } else if (config.urlPrefix) {
+                urlPrefix = config.urlPrefix;
+                suffixLength = config.suffixLength || 2;
+            }
+
+            // Resolve the urlPrefix strictly relative to the config file (e.g., inside the data/ folder)
+            const absoluteUrlPrefix = new URL(urlPrefix, manifestBaseUrl).toString();
+
+            // 3. Hand the mathematically rigid config to WebAssembly
+            const workerConfig = {
+                from: "inline",
+                config: {
+                    serverMode: config.serverMode || "chunked",
+                    requestChunkSize: config.requestChunkSize || 4096,
+                    databaseLengthBytes: config.databaseLengthBytes,
+                    serverChunkSize: config.serverChunkSize,
+                    urlPrefix: absoluteUrlPrefix,
+                    suffixLength: suffixLength
+                }
+            };
 
             this.worker = await createDbWorker(
-                [{
-                    from: "inline",
-                    config: {
-                        serverMode: "full",
-                        url: absoluteDbUrl,
-                        requestChunkSize: 4096, 
-                    },
-                }],
+                [workerConfig],
                 workerUrl,
                 wasmUrl
             );
@@ -125,7 +152,7 @@ export class DatabaseManager {
             attributes = [],
             daysInclude = [],
             daysExclude = [],
-            quarters = [], // NEW: Standalone quarter filters
+            quarters = [], 
             tbaMode = "include",
             levels = [],
             sectionTypes = [],
@@ -163,11 +190,9 @@ export class DatabaseManager {
             baseWhere.push(`(${levelConds.join(' OR ')})`);
         }
 
-        // Apply Historical Term Bounds
         if (minTermCode) baseWhere.push(`term_code >= ${minTermCode}`);
         if (maxTermCode) baseWhere.push(`term_code <= ${maxTermCode}`);
 
-        // NEW: Apply Modulo-based Quarter Isolation Filter
         if (quarters.length > 0) {
             const qMap = { 'WIN': 1, 'SPR': 2, 'SUM': 3, 'AUT': 4 };
             const qNums = quarters.map(q => qMap[q]).filter(n => n);
@@ -358,9 +383,9 @@ export class DatabaseManager {
                     
                     section.meetingsMap.set(row.meeting_id, {
                         days: row.days || 'TBA',
-                        time: timeStr || '',
+                        time: timeStr || '-',
                         bldg: row.building_room || 'TBA',
-                        instructor: row.instructor || ''
+                        instructor: row.instructor || '-'
                     });
                 }
             }

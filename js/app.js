@@ -3,7 +3,8 @@ import { UIManager } from './ui.js';
 
 class App {
     constructor() {
-        this.db = new DatabaseManager("data/schedules.db");
+        // this.db = new DatabaseManager("data/schedules.db");
+        this.db = new DatabaseManager("data/config.json");
         this.ui = new UIManager();
         
         this.searchInput = document.getElementById('omni-search');
