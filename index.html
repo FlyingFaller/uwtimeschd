@@ -1,46 +1,99 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="light">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>UW Time Schedule Search</title>
+    
+    <link rel="stylesheet" href="./theme.css">
+    
     <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        // Theme Initialization Script
+        (function() {
+            const root = document.documentElement;
+            
+            // --- CONFIGURATION ---
+            // Set to 'dark', 'light', or 'system'
+            const defaultTheme = 'system'; 
+            // ---------------------
+            
+            if (defaultTheme === 'dark') {
+                root.classList.replace('light', 'dark');
+            } else if (defaultTheme === 'system' && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+                root.classList.replace('light', 'dark');
+            }
+        })();
+
+        // Tailwind Configuration Mapping CSS Variables
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['var(--font-sans)'],
+                        mono: ['var(--font-mono)']
+                    },
+                    colors: {
+                        theme: {
+                            canvas: 'var(--bg-canvas)',
+                            surface: 'var(--bg-surface)',
+                            'surface-hover': 'var(--bg-surface-hover)',
+                            'surface-alt': 'var(--bg-surface-alt)',
+                            border: 'var(--border-color)',
+                            'border-focus': 'var(--border-focus)',
+                            text: {
+                                main: 'var(--text-main)',
+                                muted: 'var(--text-muted)',
+                                inverse: 'var(--text-inverse)',
+                            },
+                            accent: {
+                                main: 'var(--accent-main)',
+                                hover: 'var(--accent-hover)',
+                                bg: 'var(--accent-bg)',
+                                text: 'var(--accent-text)',
+                            },
+                            status: {
+                                wait: 'var(--status-wait)',
+                                ok: 'var(--status-ok)',
+                                err: 'var(--status-err)',
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    </script>
     <script src="https://cdn.jsdelivr.net/npm/lucide@latest/dist/umd/lucide.min.js"></script>
-    <style>
-        ::-webkit-scrollbar { width: 6px; height: 6px; }
-        ::-webkit-scrollbar-track { background: transparent; }
-        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
-        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
-        
-        th { position: sticky; top: 0; background-color: #f8fafc; z-index: 10; }
-        details > summary { list-style: none; }
-        details > summary::-webkit-details-marker { display: none; }
-        details[open] summary ~ * { animation: slideDown 0.2s ease-in-out; }
-        @keyframes slideDown { 0% { opacity: 0; transform: translateY(-5px); } 100% { opacity: 1; transform: translateY(0); } }
-    </style>
 </head>
-<body class="bg-slate-200 text-slate-800 font-sans h-screen flex overflow-hidden">
+<body class="bg-theme-canvas text-theme-text-main font-sans h-screen flex overflow-hidden transition-colors duration-200">
 
     <!-- LEFT SIDEBAR: CONTROL PANEL -->
-    <aside class="w-80 bg-white border-r border-slate-300 flex flex-col h-full shadow-lg z-20 shrink-0">
-        <!-- Logo / Header -->
-        <div class="p-4 border-b border-slate-200 bg-slate-50 flex items-center gap-3 shrink-0">
-            <div class="bg-purple-700 text-white p-2 rounded flex items-center justify-center shadow-sm">
-                <i data-lucide="library" class="w-5 h-5"></i>
+    <aside class="w-80 bg-theme-surface border-r border-theme-border flex flex-col h-full shadow-lg z-20 shrink-0">
+        <!-- Logo / Header with Dark Mode Toggle -->
+        <div class="p-4 border-b border-theme-border bg-theme-surface-hover flex items-center justify-between shrink-0">
+            <div class="flex items-center gap-3">
+                <div class="bg-theme-accent-main text-theme-text-inverse p-2 rounded flex items-center justify-center shadow-sm">
+                    <i data-lucide="library" class="w-5 h-5"></i>
+                </div>
+                <div>
+                    <h1 class="text-sm font-extrabold tracking-tight text-theme-text-main uppercase">UW Time Schedule</h1>
+                    <p id="db-status" class="text-[11px] text-theme-status-wait font-bold uppercase tracking-wider animate-pulse">Connecting to DB...</p>
+                </div>
             </div>
-            <div>
-                <h1 class="text-sm font-extrabold tracking-tight text-slate-900 uppercase">UW Time Schedule</h1>
-                <p id="db-status" class="text-[11px] text-amber-500 font-bold uppercase tracking-wider animate-pulse">Connecting to DB...</p>
-            </div>
+            <button id="theme-toggle" class="p-1.5 text-theme-text-muted hover:text-theme-text-main hover:bg-theme-surface rounded-md transition-colors" title="Toggle Dark Mode">
+                <i data-lucide="moon" class="w-4 h-4 dark:hidden"></i>
+                <i data-lucide="sun" class="w-4 h-4 hidden dark:block"></i>
+            </button>
         </div>
 
         <!-- Filters Scroll Area -->
         <div class="flex-1 overflow-y-auto p-5 space-y-4">
 
             <!-- Global Reset -->
-            <div class="flex items-center justify-between pb-3 border-b border-slate-100">
-                <h2 class="text-base font-bold text-slate-700 tracking-wide">Filters</h2>
-                <button id="reset-filters-btn" class="text-xs font-bold text-slate-400 hover:text-purple-700 flex items-center gap-1 transition-colors uppercase tracking-wider group">
+            <div class="flex items-center justify-between pb-3 border-b border-theme-border">
+                <h2 class="text-base font-bold text-theme-text-main tracking-wide">Filters</h2>
+                <button id="reset-filters-btn" class="text-xs font-bold text-theme-text-muted hover:text-theme-accent-main flex items-center gap-1 transition-colors uppercase tracking-wider group">
                     <i data-lucide="rotate-ccw" class="w-3.5 h-3.5 group-hover:rotate-[-45deg] transition-transform"></i>
                     Reset All
                 </button>
@@ -48,58 +101,58 @@
 
             <!-- CATEGORY 1: Term & Availability -->
             <div>
-                <h2 class="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                <h2 class="text-xs font-bold text-theme-text-muted uppercase tracking-wider mb-2 flex items-center gap-1.5">
                     <i data-lucide="calendar-days" class="w-4 h-4"></i> Term & Availability
                 </h2>
                 
                 <div class="space-y-4">
                     <!-- Term Range -->
                     <div>
-                        <label class="text-xs font-semibold text-slate-700 mb-1.5 block">Academic Term Range</label>
+                        <label class="text-xs font-semibold text-theme-text-main mb-1.5 block">Academic Term Range</label>
                         <div class="flex flex-col gap-2">
                             <div class="flex items-center gap-2">
-                                <span class="text-xs font-medium text-slate-500 w-8">From</span>
-                                <select id="start-quarter" class="text-xs border border-slate-300 rounded p-1.5 flex-1 bg-slate-50 outline-none focus:border-purple-700 focus:bg-white focus:ring-1 focus:ring-purple-700 text-slate-700 cursor-pointer transition-colors">
+                                <span class="text-xs font-medium text-theme-text-muted w-8">From</span>
+                                <select id="start-quarter" class="text-xs border border-theme-border rounded p-1.5 flex-1 bg-theme-surface outline-none focus:border-theme-border-focus focus:ring-1 focus:ring-theme-accent-main text-theme-text-main cursor-pointer transition-colors">
                                     <option value="">Any Quarter</option>
                                     <option value="WIN">WIN</option>
                                     <option value="SPR">SPR</option>
                                     <option value="SUM">SUM</option>
                                     <option value="AUT">AUT</option>
                                 </select>
-                                <input type="number" id="start-year" placeholder="Year" class="text-xs border border-slate-300 rounded p-1.5 w-[72px] outline-none focus:border-purple-700 focus:bg-white focus:ring-1 focus:ring-purple-700 bg-slate-50 text-slate-700 transition-colors" min="2003" max="2050">
+                                <input type="number" id="start-year" placeholder="Year" placeholder-theme-text-muted class="text-xs border border-theme-border rounded p-1.5 w-[72px] outline-none focus:border-theme-border-focus focus:ring-1 focus:ring-theme-accent-main bg-theme-surface text-theme-text-main transition-colors" min="2003" max="2050">
                             </div>
                             <div class="flex items-center gap-2">
-                                <span class="text-xs font-medium text-slate-500 w-8">To</span>
-                                <select id="end-quarter" class="text-xs border border-slate-300 rounded p-1.5 flex-1 bg-slate-50 outline-none focus:border-purple-700 focus:bg-white focus:ring-1 focus:ring-purple-700 text-slate-700 cursor-pointer transition-colors">
+                                <span class="text-xs font-medium text-theme-text-muted w-8">To</span>
+                                <select id="end-quarter" class="text-xs border border-theme-border rounded p-1.5 flex-1 bg-theme-surface outline-none focus:border-theme-border-focus focus:ring-1 focus:ring-theme-accent-main text-theme-text-main cursor-pointer transition-colors">
                                     <option value="">Any Quarter</option>
                                     <option value="WIN">WIN</option>
                                     <option value="SPR">SPR</option>
                                     <option value="SUM">SUM</option>
                                     <option value="AUT">AUT</option>
                                 </select>
-                                <input type="number" id="end-year" placeholder="Year" class="text-xs border border-slate-300 rounded p-1.5 w-[72px] outline-none focus:border-purple-700 focus:bg-white focus:ring-1 focus:ring-purple-700 bg-slate-50 text-slate-700 transition-colors" min="2003" max="2050">
+                                <input type="number" id="end-year" placeholder="Year" placeholder-theme-text-muted class="text-xs border border-theme-border rounded p-1.5 w-[72px] outline-none focus:border-theme-border-focus focus:ring-1 focus:ring-theme-accent-main bg-theme-surface text-theme-text-main transition-colors" min="2003" max="2050">
                             </div>
                         </div>
                     </div>
 
                     <!-- Offered In Buttons -->
                     <div>
-                        <label class="text-xs font-semibold text-slate-700 mb-1.5 block">Offered In</label>
+                        <label class="text-xs font-semibold text-theme-text-main mb-1.5 block">Offered In</label>
                         <div class="flex gap-2">
-                            <button class="quarter-btn flex-1 py-1.5 border border-slate-300 bg-white text-slate-600 hover:bg-slate-50 text-[11px] font-bold rounded transition-colors" data-quarter="WIN">WIN</button>
-                            <button class="quarter-btn flex-1 py-1.5 border border-slate-300 bg-white text-slate-600 hover:bg-slate-50 text-[11px] font-bold rounded transition-colors" data-quarter="SPR">SPR</button>
-                            <button class="quarter-btn flex-1 py-1.5 border border-slate-300 bg-white text-slate-600 hover:bg-slate-50 text-[11px] font-bold rounded transition-colors" data-quarter="SUM">SUM</button>
-                            <button class="quarter-btn flex-1 py-1.5 border border-slate-300 bg-white text-slate-600 hover:bg-slate-50 text-[11px] font-bold rounded transition-colors" data-quarter="AUT">AUT</button>
+                            <button class="quarter-btn flex-1 py-1.5 border border-theme-border bg-theme-surface text-theme-text-main hover-badge-win text-[11px] font-bold rounded transition-colors" data-quarter="WIN">WIN</button>
+                            <button class="quarter-btn flex-1 py-1.5 border border-theme-border bg-theme-surface text-theme-text-main hover-badge-spr text-[11px] font-bold rounded transition-colors" data-quarter="SPR">SPR</button>
+                            <button class="quarter-btn flex-1 py-1.5 border border-theme-border bg-theme-surface text-theme-text-main hover-badge-sum text-[11px] font-bold rounded transition-colors" data-quarter="SUM">SUM</button>
+                            <button class="quarter-btn flex-1 py-1.5 border border-theme-border bg-theme-surface text-theme-text-main hover-badge-aut text-[11px] font-bold rounded transition-colors" data-quarter="AUT">AUT</button>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <hr class="border-slate-200">
+            <hr class="border-theme-border">
 
             <!-- CATEGORY 2: Course Specifics -->
             <div>
-                <h2 class="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                <h2 class="text-xs font-bold text-theme-text-muted uppercase tracking-wider mb-2 flex items-center gap-1.5">
                     <i data-lucide="book-open" class="w-4 h-4"></i> Course Specifics
                 </h2>
                 <div class="space-y-4">
@@ -107,15 +160,15 @@
                     <!-- Searchable Majors List -->
                     <div>
                         <div class="flex justify-between items-center mb-1.5">
-                            <label class="text-xs font-semibold text-slate-700">Majors / Departments</label>
-                            <button id="clear-majors" class="text-[11px] font-bold text-purple-700 hover:text-purple-800 transition-colors">Clear</button>
+                            <label class="text-xs font-semibold text-theme-text-main">Majors / Departments</label>
+                            <button id="clear-majors" class="text-[11px] font-bold text-theme-accent-main hover:text-theme-accent-hover transition-colors">Clear</button>
                         </div>
                         <div class="relative mb-2">
-                            <input type="text" placeholder="Filter majors..." class="w-full text-xs border border-slate-300 rounded p-1.5 pl-7 focus:ring-1 focus:ring-purple-700 outline-none bg-slate-50 focus:bg-white transition-colors">
-                            <i data-lucide="search" class="w-3.5 h-3.5 text-slate-400 absolute left-2 top-2"></i>
+                            <input type="text" placeholder="Filter majors..." placeholder-theme-text-muted class="w-full text-xs border border-theme-border rounded p-1.5 pl-7 focus:ring-1 focus:ring-theme-accent-main focus:border-theme-border-focus outline-none bg-theme-surface transition-colors text-theme-text-main">
+                            <i data-lucide="search" class="w-3.5 h-3.5 text-theme-text-muted absolute left-2 top-2"></i>
                         </div>
-                        <div class="max-h-36 overflow-y-auto space-y-1 text-xs text-slate-700 border border-slate-200 p-1.5 rounded bg-slate-50 shadow-inner">
-                            <div class="text-center text-slate-400 text-xs py-4 flex flex-col items-center">
+                        <div class="max-h-36 overflow-y-auto space-y-1 text-xs text-theme-text-main border border-theme-border p-1.5 rounded bg-theme-surface shadow-inner">
+                            <div class="text-center text-theme-text-muted text-xs py-4 flex flex-col items-center">
                                 <i data-lucide="loader-2" class="w-4 h-4 animate-spin mb-1"></i> Loading majors...
                             </div>
                         </div>
@@ -123,38 +176,38 @@
 
                     <!-- Course Level -->
                     <div>
-                        <label class="text-xs font-semibold text-slate-700 mb-1.5 block">Course Level</label>
+                        <label class="text-xs font-semibold text-theme-text-main mb-1.5 block">Course Level</label>
                         <div class="grid grid-cols-4 gap-1" id="level-container">
-                            <button data-level="100" class="level-btn py-1 text-[11px] border border-slate-300 rounded hover:bg-slate-50 font-medium filter-btn bg-white text-slate-600 transition-colors">100</button>
-                            <button data-level="200" class="level-btn py-1 text-[11px] border border-slate-300 rounded hover:bg-slate-50 font-medium filter-btn bg-white text-slate-600 transition-colors">200</button>
-                            <button data-level="300" class="level-btn py-1 text-[11px] border border-slate-300 rounded hover:bg-slate-50 font-medium filter-btn bg-white text-slate-600 transition-colors">300</button>
-                            <button data-level="400" class="level-btn py-1 text-[11px] border border-slate-300 rounded hover:bg-slate-50 font-medium filter-btn bg-white text-slate-600 transition-colors">400</button>
-                            <button data-level="500" class="level-btn py-1 text-[11px] border border-slate-300 rounded hover:bg-slate-50 font-medium filter-btn bg-white text-slate-600 transition-colors">500</button>
-                            <button data-level="600" class="level-btn py-1 text-[11px] border border-slate-300 rounded hover:bg-slate-50 font-medium filter-btn bg-white text-slate-600 transition-colors">600</button>
-                            <button data-level="700" class="level-btn py-1 text-[11px] border border-slate-300 rounded hover:bg-slate-50 font-medium filter-btn bg-white text-slate-600 transition-colors">700</button>
-                            <button data-level="800" class="level-btn py-1 text-[11px] border border-slate-300 rounded hover:bg-slate-50 font-medium filter-btn bg-white text-slate-600 transition-colors">800+</button>
+                            <button data-level="100" class="level-btn py-1 text-[11px] border border-theme-border rounded hover:bg-theme-surface-hover font-medium filter-btn bg-theme-surface text-theme-text-main transition-colors">100</button>
+                            <button data-level="200" class="level-btn py-1 text-[11px] border border-theme-border rounded hover:bg-theme-surface-hover font-medium filter-btn bg-theme-surface text-theme-text-main transition-colors">200</button>
+                            <button data-level="300" class="level-btn py-1 text-[11px] border border-theme-border rounded hover:bg-theme-surface-hover font-medium filter-btn bg-theme-surface text-theme-text-main transition-colors">300</button>
+                            <button data-level="400" class="level-btn py-1 text-[11px] border border-theme-border rounded hover:bg-theme-surface-hover font-medium filter-btn bg-theme-surface text-theme-text-main transition-colors">400</button>
+                            <button data-level="500" class="level-btn py-1 text-[11px] border border-theme-border rounded hover:bg-theme-surface-hover font-medium filter-btn bg-theme-surface text-theme-text-main transition-colors">500</button>
+                            <button data-level="600" class="level-btn py-1 text-[11px] border border-theme-border rounded hover:bg-theme-surface-hover font-medium filter-btn bg-theme-surface text-theme-text-main transition-colors">600</button>
+                            <button data-level="700" class="level-btn py-1 text-[11px] border border-theme-border rounded hover:bg-theme-surface-hover font-medium filter-btn bg-theme-surface text-theme-text-main transition-colors">700</button>
+                            <button data-level="800" class="level-btn py-1 text-[11px] border border-theme-border rounded hover:bg-theme-surface-hover font-medium filter-btn bg-theme-surface text-theme-text-main transition-colors">800+</button>
                         </div>
                     </div>
 
                     <!-- Credits -->
                     <div class="flex gap-2">
                         <div class="flex-1">
-                            <label class="text-xs font-semibold text-slate-700 mb-1 block">Min Credits</label>
-                            <input type="number" id="min-credits" placeholder="0" class="w-full text-xs border border-slate-300 rounded p-1.5 outline-none bg-slate-50 focus:bg-white focus:ring-1 focus:ring-purple-700 transition-colors">
+                            <label class="text-xs font-semibold text-theme-text-main mb-1 block">Min Credits</label>
+                            <input type="number" id="min-credits" placeholder="0" class="w-full text-xs border border-theme-border rounded p-1.5 outline-none bg-theme-surface focus:ring-1 focus:ring-theme-accent-main text-theme-text-main transition-colors">
                         </div>
                         <div class="flex-1">
-                            <label class="text-xs font-semibold text-slate-700 mb-1 block">Max Credits</label>
-                            <input type="number" id="max-credits" placeholder="30" class="w-full text-xs border border-slate-300 rounded p-1.5 outline-none bg-slate-50 focus:bg-white focus:ring-1 focus:ring-purple-700 transition-colors">
+                            <label class="text-xs font-semibold text-theme-text-main mb-1 block">Max Credits</label>
+                            <input type="number" id="max-credits" placeholder="30" class="w-full text-xs border border-theme-border rounded p-1.5 outline-none bg-theme-surface focus:ring-1 focus:ring-theme-accent-main text-theme-text-main transition-colors">
                         </div>
                     </div>
                 </div>
             </div>
 
-            <hr class="border-slate-200">
+            <hr class="border-theme-border">
 
             <!-- CATEGORY 3: Schedule & Time -->
             <div>
-                <h2 class="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                <h2 class="text-xs font-bold text-theme-text-muted uppercase tracking-wider mb-2 flex items-center gap-1.5">
                     <i data-lucide="clock" class="w-4 h-4"></i> Schedule & Time
                 </h2>
                 
@@ -162,102 +215,101 @@
                     <!-- Days -->
                     <div>
                         <div class="flex justify-between items-center mb-1.5">
-                            <label class="text-xs font-semibold text-slate-700">Meeting Days</label>
-                            <div id="day-mode-toggle" class="flex bg-slate-100 rounded p-0.5 border border-slate-200 cursor-pointer">
-                                <button data-mode="include" class="mode-btn text-[11px] px-2 py-0.5 bg-white shadow-sm rounded-sm font-bold text-slate-700 active transition-all">Include</button>
-                                <button data-mode="exclude" class="mode-btn text-[11px] px-2 py-0.5 text-slate-500 font-medium hover:text-slate-700 transition-all">Exclude</button>
+                            <label class="text-xs font-semibold text-theme-text-main">Meeting Days</label>
+                            <div id="day-mode-toggle" class="flex bg-theme-surface-alt rounded p-0.5 border border-theme-border cursor-pointer">
+                                <button data-mode="include" class="mode-btn text-[11px] px-2 py-0.5 bg-theme-surface shadow-sm rounded-sm font-bold text-theme-text-main active transition-all">Include</button>
+                                <button data-mode="exclude" class="mode-btn text-[11px] px-2 py-0.5 text-theme-text-muted font-medium hover:text-theme-text-main transition-all">Exclude</button>
                             </div>
                         </div>
                         <div class="flex gap-1" id="days-container">
-                            <button data-day="M" class="flex-1 py-1 text-xs border border-slate-300 rounded hover:bg-slate-50 font-medium filter-btn day-btn bg-white text-slate-600 transition-colors">M</button>
-                            <button data-day="T" class="flex-1 py-1 text-xs border border-slate-300 rounded hover:bg-slate-50 font-medium filter-btn day-btn bg-white text-slate-600 transition-colors">T</button>
-                            <button data-day="W" class="flex-1 py-1 text-xs border border-slate-300 rounded hover:bg-slate-50 font-medium filter-btn day-btn bg-white text-slate-600 transition-colors">W</button>
-                            <button data-day="Th" class="flex-1 py-1 text-xs border border-slate-300 rounded hover:bg-slate-50 font-medium filter-btn day-btn bg-white text-slate-600 transition-colors">Th</button>
-                            <button data-day="F" class="flex-1 py-1 text-xs border border-slate-300 rounded hover:bg-slate-50 font-medium filter-btn day-btn bg-white text-slate-600 transition-colors">F</button>
+                            <button data-day="M" class="flex-1 py-1 text-xs border border-theme-border rounded hover:bg-theme-surface-hover font-medium filter-btn day-btn bg-theme-surface text-theme-text-main transition-colors">M</button>
+                            <button data-day="T" class="flex-1 py-1 text-xs border border-theme-border rounded hover:bg-theme-surface-hover font-medium filter-btn day-btn bg-theme-surface text-theme-text-main transition-colors">T</button>
+                            <button data-day="W" class="flex-1 py-1 text-xs border border-theme-border rounded hover:bg-theme-surface-hover font-medium filter-btn day-btn bg-theme-surface text-theme-text-main transition-colors">W</button>
+                            <button data-day="Th" class="flex-1 py-1 text-xs border border-theme-border rounded hover:bg-theme-surface-hover font-medium filter-btn day-btn bg-theme-surface text-theme-text-main transition-colors">Th</button>
+                            <button data-day="F" class="flex-1 py-1 text-xs border border-theme-border rounded hover:bg-theme-surface-hover font-medium filter-btn day-btn bg-theme-surface text-theme-text-main transition-colors">F</button>
                         </div>
-                        <p class="text-[11px] text-slate-500 mt-1.5 italic text-center" id="day-mode-desc">Must meet on ALL selected days</p>
+                        <p class="text-[11px] text-theme-text-muted mt-1.5 italic text-center" id="day-mode-desc">Must meet on ALL selected days</p>
                     </div>
 
                     <!-- Time Bounds -->
                     <div class="flex gap-2">
                         <div class="flex-1">
-                            <label class="text-xs font-semibold text-slate-700 mb-1 block">Starts After</label>
-                            <input type="time" id="start-time" class="w-full text-xs border border-slate-300 rounded p-1.5 outline-none bg-slate-50 focus:bg-white focus:ring-1 focus:ring-purple-700 transition-colors">
+                            <label class="text-xs font-semibold text-theme-text-main mb-1 block">Starts After</label>
+                            <input type="time" id="start-time" class="w-full text-xs border border-theme-border rounded p-1.5 outline-none bg-theme-surface focus:ring-1 focus:ring-theme-accent-main text-theme-text-main transition-colors">
                         </div>
                         <div class="flex-1">
-                            <label class="text-xs font-semibold text-slate-700 mb-1 block">Ends Before</label>
-                            <input type="time" id="end-time" class="w-full text-xs border border-slate-300 rounded p-1.5 outline-none bg-slate-50 focus:bg-white focus:ring-1 focus:ring-purple-700 transition-colors">
+                            <label class="text-xs font-semibold text-theme-text-main mb-1 block">Ends Before</label>
+                            <input type="time" id="end-time" class="w-full text-xs border border-theme-border rounded p-1.5 outline-none bg-theme-surface focus:ring-1 focus:ring-theme-accent-main text-theme-text-main transition-colors">
                         </div>
                     </div>
 
                     <!-- Apply To Scope & TBA Controls -->
                     <div class="space-y-3 pt-1">
                         <div class="flex justify-between items-center">
-                            <label class="text-xs font-semibold text-slate-700">Apply Limits To:</label>
-                            <select id="time-scope" class="text-xs border border-slate-300 rounded p-1 outline-none bg-white font-semibold text-slate-700 shadow-sm cursor-pointer focus:ring-1 focus:ring-purple-700">
+                            <label class="text-xs font-semibold text-theme-text-main">Apply Limits To:</label>
+                            <select id="time-scope" class="text-xs border border-theme-border rounded p-1 outline-none bg-theme-surface font-semibold text-theme-text-main shadow-sm cursor-pointer focus:ring-1 focus:ring-theme-accent-main">
                                 <option value="primary">Primary Sections</option>
                                 <option value="all">All Sections</option>
                             </select>
                         </div>
                         <div class="flex justify-between items-center">
-                            <label class="text-xs font-semibold text-slate-700">TBA Meetings:</label>
-                            <!-- Now matches Meeting Days HTML format exactly -->
-                            <div id="tba-toggle" class="flex bg-slate-100 rounded p-0.5 border border-slate-200 cursor-pointer">
-                                <button data-tba="include" class="tba-btn text-[11px] px-2 py-0.5 bg-white shadow-sm rounded-sm font-bold text-slate-700 active transition-all">Include</button>
-                                <button data-tba="exclude" class="tba-btn text-[11px] px-2 py-0.5 text-slate-500 font-medium hover:text-slate-700 transition-all">Exclude</button>
+                            <label class="text-xs font-semibold text-theme-text-main">TBA Meetings:</label>
+                            <div id="tba-toggle" class="flex bg-theme-surface-alt rounded p-0.5 border border-theme-border cursor-pointer">
+                                <button data-tba="include" class="tba-btn text-[11px] px-2 py-0.5 bg-theme-surface shadow-sm rounded-sm font-bold text-theme-text-main active transition-all">Include</button>
+                                <button data-tba="exclude" class="tba-btn text-[11px] px-2 py-0.5 text-theme-text-muted font-medium hover:text-theme-text-main transition-all">Exclude</button>
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <hr class="border-slate-200">
+            <hr class="border-theme-border">
 
             <!-- CATEGORY 4: Section Types -->
             <div>
-                <h2 class="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                <h2 class="text-xs font-bold text-theme-text-muted uppercase tracking-wider mb-2 flex items-center gap-1.5">
                     <i data-lucide="layers" class="w-4 h-4"></i> Section Types
                 </h2>
-                <div class="grid grid-cols-2 gap-y-2 gap-x-1 text-xs text-slate-700" id="section-types-container">
-                    <label class="flex items-center gap-2 cursor-pointer hover:bg-slate-50 p-1 -ml-1 rounded transition-colors"><input type="checkbox" data-type="LC" class="accent-purple-700 type-checkbox"> Lecture (LC)</label>
-                    <label class="flex items-center gap-2 cursor-pointer hover:bg-slate-50 p-1 -ml-1 rounded transition-colors"><input type="checkbox" data-type="QZ" class="accent-purple-700 type-checkbox"> Quiz (QZ)</label>
-                    <label class="flex items-center gap-2 cursor-pointer hover:bg-slate-50 p-1 -ml-1 rounded transition-colors"><input type="checkbox" data-type="LB" class="accent-purple-700 type-checkbox"> Lab (LB)</label>
-                    <label class="flex items-center gap-2 cursor-pointer hover:bg-slate-50 p-1 -ml-1 rounded transition-colors"><input type="checkbox" data-type="SM" class="accent-purple-700 type-checkbox"> Seminar (SM)</label>
-                    <label class="flex items-center gap-2 cursor-pointer hover:bg-slate-50 p-1 -ml-1 rounded transition-colors"><input type="checkbox" data-type="ST" class="accent-purple-700 type-checkbox"> Studio (ST)</label>
-                    <label class="flex items-center gap-2 cursor-pointer hover:bg-slate-50 p-1 -ml-1 rounded transition-colors"><input type="checkbox" data-type="PR" class="accent-purple-700 type-checkbox"> Practicum (PR)</label>
-                    <label class="flex items-center gap-2 cursor-pointer hover:bg-slate-50 p-1 -ml-1 rounded transition-colors"><input type="checkbox" data-type="CL" class="accent-purple-700 type-checkbox"> Clinic (CL)</label>
-                    <label class="flex items-center gap-2 cursor-pointer hover:bg-slate-50 p-1 -ml-1 rounded transition-colors"><input type="checkbox" data-type="CK" class="accent-purple-700 type-checkbox"> Clerkship (CK)</label>
-                    <label class="flex items-center gap-2 cursor-pointer hover:bg-slate-50 p-1 -ml-1 rounded transition-colors"><input type="checkbox" data-type="CO" class="accent-purple-700 type-checkbox"> Conference (CO)</label>
-                    <label class="flex items-center gap-2 cursor-pointer hover:bg-slate-50 p-1 -ml-1 rounded transition-colors"><input type="checkbox" data-type="IS" class="accent-purple-700 type-checkbox"> Ind. Study (IS)</label>
+                <div class="grid grid-cols-2 gap-y-2 gap-x-1 text-xs text-theme-text-main" id="section-types-container">
+                    <label class="flex items-center gap-2 cursor-pointer hover:bg-theme-surface-hover p-1 -ml-1 rounded transition-colors"><input type="checkbox" data-type="LC" class="accent-theme-accent-main type-checkbox"> Lecture (LC)</label>
+                    <label class="flex items-center gap-2 cursor-pointer hover:bg-theme-surface-hover p-1 -ml-1 rounded transition-colors"><input type="checkbox" data-type="QZ" class="accent-theme-accent-main type-checkbox"> Quiz (QZ)</label>
+                    <label class="flex items-center gap-2 cursor-pointer hover:bg-theme-surface-hover p-1 -ml-1 rounded transition-colors"><input type="checkbox" data-type="LB" class="accent-theme-accent-main type-checkbox"> Lab (LB)</label>
+                    <label class="flex items-center gap-2 cursor-pointer hover:bg-theme-surface-hover p-1 -ml-1 rounded transition-colors"><input type="checkbox" data-type="SM" class="accent-theme-accent-main type-checkbox"> Seminar (SM)</label>
+                    <label class="flex items-center gap-2 cursor-pointer hover:bg-theme-surface-hover p-1 -ml-1 rounded transition-colors"><input type="checkbox" data-type="ST" class="accent-theme-accent-main type-checkbox"> Studio (ST)</label>
+                    <label class="flex items-center gap-2 cursor-pointer hover:bg-theme-surface-hover p-1 -ml-1 rounded transition-colors"><input type="checkbox" data-type="PR" class="accent-theme-accent-main type-checkbox"> Practicum (PR)</label>
+                    <label class="flex items-center gap-2 cursor-pointer hover:bg-theme-surface-hover p-1 -ml-1 rounded transition-colors"><input type="checkbox" data-type="CL" class="accent-theme-accent-main type-checkbox"> Clinic (CL)</label>
+                    <label class="flex items-center gap-2 cursor-pointer hover:bg-theme-surface-hover p-1 -ml-1 rounded transition-colors"><input type="checkbox" data-type="CK" class="accent-theme-accent-main type-checkbox"> Clerkship (CK)</label>
+                    <label class="flex items-center gap-2 cursor-pointer hover:bg-theme-surface-hover p-1 -ml-1 rounded transition-colors"><input type="checkbox" data-type="CO" class="accent-theme-accent-main type-checkbox"> Conference (CO)</label>
+                    <label class="flex items-center gap-2 cursor-pointer hover:bg-theme-surface-hover p-1 -ml-1 rounded transition-colors"><input type="checkbox" data-type="IS" class="accent-theme-accent-main type-checkbox"> Ind. Study (IS)</label>
                 </div>
             </div>
 
-            <hr class="border-slate-200">
+            <hr class="border-theme-border">
 
             <!-- CATEGORY 5: Attributes & Grading -->
             <div class="pb-6">
-                <h2 class="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                <h2 class="text-xs font-bold text-theme-text-muted uppercase tracking-wider mb-2 flex items-center gap-1.5">
                     <i data-lucide="tags" class="w-4 h-4"></i> Attributes & Grading
                 </h2>
                 
                 <div class="flex flex-wrap gap-2" id="attributes-container">
-                    <button data-attr="Restricted" class="filter-chip px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide border border-slate-300 rounded-full hover:bg-slate-100 text-slate-600 bg-white shadow-sm transition-colors" title="Has Registration Restrictions">Restricted</button>
-                    <button data-attr="Add Code" class="filter-chip px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide border border-slate-300 rounded-full hover:bg-slate-100 text-slate-600 bg-white shadow-sm transition-colors" title="Add Code Required">Add Code (&gt;)</button>
-                    <button data-attr="CR/NC" class="filter-chip px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide border border-slate-300 rounded-full hover:bg-slate-100 text-slate-600 bg-white shadow-sm transition-colors" title="Credit / No Credit Only">CR/NC Only</button>
-                    <button data-attr="No Extra Fees" class="filter-chip px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide border border-slate-300 rounded-full hover:bg-slate-100 text-slate-600 bg-white shadow-sm transition-colors">No Extra Fees</button>
-                    <button data-attr="#" class="filter-chip px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide border border-slate-300 rounded-full hover:bg-slate-100 text-slate-600 bg-white shadow-sm transition-colors" title="Not eligible for Financial Aid">No FinAid (#)</button>
+                    <button data-attr="Restricted" class="filter-chip px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide border border-theme-border rounded-full hover:bg-theme-surface-hover text-theme-text-main bg-theme-surface shadow-sm transition-colors" title="Has Registration Restrictions">Restricted</button>
+                    <button data-attr="Add Code" class="filter-chip px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide border border-theme-border rounded-full hover:bg-theme-surface-hover text-theme-text-main bg-theme-surface shadow-sm transition-colors" title="Add Code Required">Add Code (&gt;)</button>
+                    <button data-attr="CR/NC" class="filter-chip px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide border border-theme-border rounded-full hover:bg-theme-surface-hover text-theme-text-main bg-theme-surface shadow-sm transition-colors" title="Credit / No Credit Only">CR/NC Only</button>
+                    <button data-attr="No Extra Fees" class="filter-chip px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide border border-theme-border rounded-full hover:bg-theme-surface-hover text-theme-text-main bg-theme-surface shadow-sm transition-colors">No Extra Fees</button>
+                    <button data-attr="#" class="filter-chip px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide border border-theme-border rounded-full hover:bg-theme-surface-hover text-theme-text-main bg-theme-surface shadow-sm transition-colors" title="Not eligible for Financial Aid">No FinAid (#)</button>
 
-                    <button data-attr="W" class="filter-chip px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide border border-slate-300 rounded-full hover:bg-slate-100 text-slate-600 bg-white shadow-sm transition-colors">Writing (W)</button>
-                    <button data-attr="H" class="filter-chip px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide border border-slate-300 rounded-full hover:bg-slate-100 text-slate-600 bg-white shadow-sm transition-colors">Honors (H)</button>
-                    <button data-attr="J" class="filter-chip px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide border border-slate-300 rounded-full hover:bg-slate-100 text-slate-600 bg-white shadow-sm transition-colors">Jointly Offered (J)</button>
-                    <button data-attr="%" class="filter-chip px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide border border-slate-300 rounded-full hover:bg-slate-100 text-slate-600 bg-white shadow-sm transition-colors">New Course (%)</button>
+                    <button data-attr="W" class="filter-chip px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide border border-theme-border rounded-full hover:bg-theme-surface-hover text-theme-text-main bg-theme-surface shadow-sm transition-colors">Writing (W)</button>
+                    <button data-attr="H" class="filter-chip px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide border border-theme-border rounded-full hover:bg-theme-surface-hover text-theme-text-main bg-theme-surface shadow-sm transition-colors">Honors (H)</button>
+                    <button data-attr="J" class="filter-chip px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide border border-theme-border rounded-full hover:bg-theme-surface-hover text-theme-text-main bg-theme-surface shadow-sm transition-colors">Jointly Offered (J)</button>
+                    <button data-attr="%" class="filter-chip px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide border border-theme-border rounded-full hover:bg-theme-surface-hover text-theme-text-main bg-theme-surface shadow-sm transition-colors">New Course (%)</button>
 
-                    <button data-attr="O" class="filter-chip px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide border border-slate-300 rounded-full hover:bg-slate-100 text-slate-600 bg-white shadow-sm transition-colors">Online (O)</button>
-                    <button data-attr="A" class="filter-chip px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide border border-slate-300 rounded-full hover:bg-slate-100 text-slate-600 bg-white shadow-sm transition-colors">Async (A)</button>
-                    <button data-attr="B" class="filter-chip px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide border border-slate-300 rounded-full hover:bg-slate-100 text-slate-600 bg-white shadow-sm transition-colors">Hybrid (B)</button>
-                    <button data-attr="E" class="filter-chip px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide border border-slate-300 rounded-full hover:bg-slate-100 text-slate-600 bg-white shadow-sm transition-colors">Community (E)</button>
-                    <button data-attr="S" class="filter-chip px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide border border-slate-300 rounded-full hover:bg-slate-100 text-slate-600 bg-white shadow-sm transition-colors">Service (S)</button>
-                    <button data-attr="R" class="filter-chip px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide border border-slate-300 rounded-full hover:bg-slate-100 text-slate-600 bg-white shadow-sm transition-colors">Research (R)</button>
+                    <button data-attr="O" class="filter-chip px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide border border-theme-border rounded-full hover:bg-theme-surface-hover text-theme-text-main bg-theme-surface shadow-sm transition-colors">Online (O)</button>
+                    <button data-attr="A" class="filter-chip px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide border border-theme-border rounded-full hover:bg-theme-surface-hover text-theme-text-main bg-theme-surface shadow-sm transition-colors">Async (A)</button>
+                    <button data-attr="B" class="filter-chip px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide border border-theme-border rounded-full hover:bg-theme-surface-hover text-theme-text-main bg-theme-surface shadow-sm transition-colors">Hybrid (B)</button>
+                    <button data-attr="E" class="filter-chip px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide border border-theme-border rounded-full hover:bg-theme-surface-hover text-theme-text-main bg-theme-surface shadow-sm transition-colors">Community (E)</button>
+                    <button data-attr="S" class="filter-chip px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide border border-theme-border rounded-full hover:bg-theme-surface-hover text-theme-text-main bg-theme-surface shadow-sm transition-colors">Service (S)</button>
+                    <button data-attr="R" class="filter-chip px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide border border-theme-border rounded-full hover:bg-theme-surface-hover text-theme-text-main bg-theme-surface shadow-sm transition-colors">Research (R)</button>
                 </div>
             </div>
 
@@ -265,51 +317,52 @@
     </aside>
 
     <!-- MAIN CONTENT AREA -->
-    <main class="flex-1 flex flex-col min-w-0 bg-slate-100">
+    <main class="flex-1 flex flex-col min-w-0 bg-theme-canvas">
         
-        <header class="bg-white border-b border-slate-300 shadow-sm z-10 shrink-0 flex flex-col">
+        <header class="bg-theme-surface border-b border-theme-border shadow-sm z-10 shrink-0 flex flex-col">
             
             <!-- Tier 1: Search Bar -->
             <div class="p-4 flex gap-3 max-w-6xl mx-auto w-full">
                 <div class="relative flex-1">
                     <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
-                        <i data-lucide="search" class="text-slate-400 w-5 h-5"></i>
+                        <i data-lucide="search" class="text-theme-text-muted w-5 h-5"></i>
                     </div>
                     <input 
                         type="text" 
                         id="omni-search"
                         disabled
                         placeholder="Search prefix, course number, title, instructor, building, or SLN... (e.g. AA 210, Hurlen)" 
-                        class="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-300 rounded-lg shadow-inner text-sm focus:bg-white focus:ring-2 focus:ring-purple-700 focus:border-purple-700 outline-none transition-all disabled:opacity-50"
+                        class="w-full pl-10 pr-4 py-2.5 bg-theme-surface-alt border border-theme-border rounded-lg shadow-inner text-sm text-theme-text-main focus:bg-theme-surface focus:ring-2 focus:ring-theme-accent-main focus:border-theme-border-focus outline-none transition-all disabled:opacity-50"
                     >
                 </div>
-                <button id="search-btn" class="px-6 py-2.5 rounded-lg text-sm font-bold transition-all bg-slate-300 text-slate-500 cursor-not-allowed shrink-0" disabled>
+                <button id="search-btn" class="px-6 py-2.5 rounded-lg text-sm font-bold transition-all bg-theme-border text-theme-text-muted cursor-not-allowed shrink-0" disabled>
                     Search
                 </button>
             </div>
 
             <!-- Tier 2: Utility Bar -->
-            <div class="bg-slate-50 border-t border-slate-200 px-4 py-2">
+            <div class="bg-theme-surface-hover border-t border-theme-border px-4 py-2">
                 <div class="max-w-6xl mx-auto flex items-center justify-between w-full">
                     
                     <div class="flex items-center gap-4">
-                        <div class="text-sm text-slate-500">
-                            <span id="result-count" class="font-extrabold text-slate-800">0</span> courses found
+                        <div class="text-sm text-theme-text-muted">
+                            <span id="result-count" class="font-extrabold text-theme-text-main">0</span> courses found
                         </div>
-                        <div class="h-4 w-px bg-slate-300"></div>
+                        <div class="h-4 w-px bg-theme-border"></div>
                         <label for="load-all-toggle" class="flex items-center gap-1.5 cursor-pointer group">
-                            <input type="checkbox" id="load-all-toggle" class="cursor-pointer rounded border-slate-300 text-purple-700 focus:ring-purple-700 w-3.5 h-3.5">
-                            <span class="text-[11px] font-bold text-slate-600 group-hover:text-slate-900 select-none tracking-wider uppercase transition-colors">Load All Data</span>
+                            <!-- Added accent-theme-accent-main to color the native browser checkbox -->
+                            <input type="checkbox" id="load-all-toggle" class="cursor-pointer rounded border-theme-border accent-theme-accent-main text-theme-accent-main focus:ring-theme-accent-main w-3.5 h-3.5 bg-theme-surface">
+                            <span class="text-[11px] font-bold text-theme-text-muted group-hover:text-theme-text-main select-none tracking-wider uppercase transition-colors">Load All Data</span>
                         </label>
                     </div>
-                    
+
                     <div class="flex items-center gap-3">
-                        <div class="flex gap-1.5 bg-slate-200/50 p-1 rounded border border-slate-200">
-                            <button id="expand-all-btn" class="text-[11px] font-bold text-purple-700 hover:bg-purple-100 px-2.5 py-1 rounded-sm transition-colors">Expand All</button>
-                            <button id="collapse-all-btn" class="text-[11px] font-bold text-slate-600 hover:bg-white hover:shadow-sm px-2.5 py-1 rounded-sm transition-colors">Collapse All</button>
+                        <div class="flex gap-1.5 bg-theme-surface p-1 rounded border border-theme-border">
+                            <button id="expand-all-btn" class="text-[11px] font-bold text-theme-accent-main hover:bg-theme-surface-hover px-2.5 py-1 rounded-sm transition-colors">Expand All</button>
+                            <button id="collapse-all-btn" class="text-[11px] font-bold text-theme-text-muted hover:bg-theme-surface-hover px-2.5 py-1 rounded-sm transition-colors">Collapse All</button>
                         </div>
                         
-                        <select id="sort-select" class="text-xs border border-slate-300 rounded py-1 px-2 outline-none bg-white font-bold text-slate-700 cursor-pointer shadow-sm focus:border-purple-700 focus:ring-1 focus:ring-purple-700 transition-colors">
+                        <select id="sort-select" class="text-xs border border-theme-border rounded p-1.5 outline-none bg-theme-surface font-bold text-theme-text-main cursor-pointer shadow-sm focus:border-theme-border-focus focus:ring-1 focus:ring-theme-accent-main transition-colors">
                             <option value="newest" selected>Sort: Newest First</option>
                             <option value="course">Sort: Course (A-Z)</option>
                             <option value="oldest">Sort: Oldest First</option>

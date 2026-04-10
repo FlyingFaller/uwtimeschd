@@ -1,0 +1,144 @@
+:root {
+    /* Backgrounds */
+    --bg-canvas: #f1f5f9;      /* slate-100 (Lightened for better contrast) */
+    --bg-surface: #ffffff;     /* white */
+    --bg-surface-hover: #f8fafc; /* slate-50 */
+    --bg-surface-alt: #e2e8f0; /* slate-200 (Darkened slightly for toggle tracks) */
+    
+    /* Typography */
+    --font-sans: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+    
+    --text-main: #1e293b;      /* slate-800 */
+    --text-muted: #64748b;     /* slate-500 */
+    --text-inverse: #ffffff;   /* Pure white */
+    
+    /* Borders */
+    --border-color: #cbd5e1;   /* slate-300 */
+    --border-focus: #7e22ce;   /* Focus ring color */
+    
+    /* Accent (UW Purple) */
+    --accent-main: #7e22ce;    /* purple-700 */
+    --accent-hover: #6b21a8;   /* purple-800 */
+    --accent-bg: #faf5ff;      /* purple-50 */
+    --accent-text: #7e22ce;    /* purple-700 */
+
+    /* Statuses */
+    --status-wait: #f59e0b;    /* amber-500 */
+    --status-ok: #059669;      /* emerald-600 */
+    --status-err: #dc2626;     /* red-600 */
+}
+
+.dark {
+    /* Backgrounds */
+    --bg-canvas: #020617;      /* slate-950 (Deepest background) */
+    --bg-surface: #0f172a;     /* slate-900 (Main cards and sidebar) */
+    --bg-surface-alt: #1e293b; /* slate-800 (Inputs, Primary Sections - Lightened!) */
+    --bg-surface-hover: #334155; /* slate-700 (Hover states) */
+    
+    /* Typography */
+    --text-main: #f8fafc;      /* slate-50 */
+    --text-muted: #94a3b8;     /* slate-400 */
+    --text-inverse: #ffffff;   /* Pure white */
+    
+    /* Borders */
+    --border-color: #475569;   /* slate-600 */
+    --border-focus: #a855f7;   /* purple-500 */
+    
+    /* Accent (Adapted for Dark Mode) */
+    --accent-main: #9333ea;    /* purple-600 */
+    --accent-hover: #a855f7;   /* purple-500 */
+    --accent-bg: #3b0764;      /* purple-950 */
+    --accent-text: #d8b4fe;    /* purple-300 */
+
+    /* Statuses */
+    --status-wait: #fbbf24;    /* amber-400 */
+    --status-ok: #34d399;      /* emerald-400 */
+    --status-err: #f87171;     /* red-400 */
+}
+
+/* Base DOM Adjustments */
+body { background-color: var(--bg-canvas); color: var(--text-main); font-family: var(--font-sans); }
+th { background-color: var(--bg-surface-hover); border-bottom-color: var(--border-color); }
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border-color); border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
+
+details > summary { list-style: none; }
+details > summary::-webkit-details-marker { display: none; }
+details[open] summary ~ * { animation: slideDown 0.2s ease-in-out; }
+@keyframes slideDown { 0% { opacity: 0; transform: translateY(-5px); } 100% { opacity: 1; transform: translateY(0); } }
+
+/* =========================================
+   Semantic Badges & Tags
+   These automatically adjust contrast based on Light/Dark mode
+   ========================================= */
+
+/* Quarter Badges & Hover States */
+.hover-badge-aut:hover:not(.active) { background-color: #fee2e2; color: #991b1b; }
+.dark .hover-badge-aut:hover:not(.active) { background-color: #7f1d1d; color: #fca5a5; }
+
+.hover-badge-win:hover:not(.active) { background-color: #eff6ff; color: #1e3a8a; }
+.dark .hover-badge-win:hover:not(.active) { background-color: #1e3a8a; color: #bfdbfe; }
+
+.hover-badge-spr:hover:not(.active) { background-color: #f0fdf4; color: #14532d; }
+.dark .hover-badge-spr:hover:not(.active) { background-color: #14532d; color: #86efac; }
+
+.hover-badge-sum:hover:not(.active) { background-color: #fefce8; color: #713f12; }
+.dark .hover-badge-sum:hover:not(.active) { background-color: #713f12; color: #fde047; }
+
+.badge-aut { background-color: #ffcccc; color: #7f1d1d; border-color: #fca5a5; }
+.dark .badge-aut { background-color: #450a0a; color: #fca5a5; border-color: #7f1d1d; }
+
+.badge-win { background-color: #99ccff; color: #1e3a8a; border-color: #93c5fd; }
+.dark .badge-win { background-color: #172554; color: #93c5fd; border-color: #1e3a8a; }
+
+.badge-spr { background-color: #ccffcc; color: #14532d; border-color: #86efac; }
+.dark .badge-spr { background-color: #052e16; color: #86efac; border-color: #14532d; }
+
+.badge-sum { background-color: #ffffcc; color: #713f12; border-color: #fde047; }
+.dark .badge-sum { background-color: #422006; color: #fde047; border-color: #713f12; }
+
+/* UI Tags (Course Types & Attributes) */
+.tag-slate { background-color: var(--bg-surface-alt); color: var(--text-muted); border-color: var(--border-color); }
+
+.tag-blue { background-color: #dbeafe; color: #1e40af; border-color: #bfdbfe; }
+.dark .tag-blue { background-color: #1e3a8a; color: #bfdbfe; border-color: #1e40af; }
+
+.tag-orange { background-color: #ffedd5; color: #9a3412; border-color: #fed7aa; }
+.dark .tag-orange { background-color: #7c2d12; color: #fed7aa; border-color: #9a3412; }
+
+.tag-purple { background-color: #f3e8ff; color: #6b21a8; border-color: #e9d5ff; }
+.dark .tag-purple { background-color: #4c1d95; color: #e9d5ff; border-color: #6b21a8; }
+
+.tag-green { background-color: #dcfce7; color: #166534; border-color: #bbf7d0; }
+.dark .tag-green { background-color: #14532d; color: #bbf7d0; border-color: #166534; }
+
+.tag-indigo { background-color: #e0e7ff; color: #3730a3; border-color: #c7d2fe; }
+.dark .tag-indigo { background-color: #312e81; color: #c7d2fe; border-color: #3730a3; }
+
+.tag-fuchsia { background-color: #fae8ff; color: #86198f; border-color: #f5d0fe; }
+.dark .tag-fuchsia { background-color: #701a75; color: #f5d0fe; border-color: #86198f; }
+
+.tag-teal { background-color: #ccfbf1; color: #115e59; border-color: #99f6e4; }
+.dark .tag-teal { background-color: #134e4a; color: #99f6e4; border-color: #115e59; }
+
+.tag-sky { background-color: #e0f2fe; color: #075985; border-color: #bae6fd; }
+.dark .tag-sky { background-color: #0c4a6e; color: #bae6fd; border-color: #075985; }
+
+.tag-emerald { background-color: #d1fae5; color: #065f46; border-color: #a7f3d0; }
+.dark .tag-emerald { background-color: #064e3b; color: #a7f3d0; border-color: #065f46; }
+
+.tag-lime { background-color: #ecfccb; color: #3f6212; border-color: #d9f99d; }
+.dark .tag-lime { background-color: #365314; color: #d9f99d; border-color: #3f6212; }
+
+.tag-red { background-color: #fee2e2; color: #991b1b; border-color: #fecaca; }
+.dark .tag-red { background-color: #7f1d1d; color: #fecaca; border-color: #991b1b; }
+
+/* Alert Boxes */
+.bg-alert-amber { background-color: #fffbeb; color: #78350f; border-color: #fef3c7; }
+.dark .bg-alert-amber { background-color: #422006; color: #fef3c7; border-color: #78350f; }
+
+.bg-alert-blue { background-color: #eff6ff; color: #1e3a8a; border-color: #dbeafe; }
+.dark .bg-alert-blue { background-color: #172554; color: #dbeafe; border-color: #1e3a8a; }

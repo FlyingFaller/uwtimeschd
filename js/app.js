@@ -3,7 +3,6 @@ import { UIManager } from './ui.js';
 
 class App {
     constructor() {
-        // this.db = new DatabaseManager("data/schedules.db");
         this.db = new DatabaseManager("data/config.json");
         this.ui = new UIManager();
         
@@ -16,7 +15,6 @@ class App {
         this.currentQuery = '';
         this.isExpanded = false; 
         
-        // Pagination State
         this.currentAllIds = [];
         this.currentOffset = 0;
         this.currentSortBy = 'newest';
@@ -26,15 +24,20 @@ class App {
         this.bindEvents();
     }
 
-    _getQuarterStyles(quarter) {
-        if (quarter === 'WIN') return ['bg-[#99ccff]', 'text-blue-900', 'border-blue-300'];
-        if (quarter === 'SPR') return ['bg-[#ccffcc]', 'text-green-900', 'border-green-300'];
-        if (quarter === 'SUM') return ['bg-[#ffffcc]', 'text-yellow-900', 'border-yellow-300'];
-        if (quarter === 'AUT') return ['bg-[#ffcccc]', 'text-red-900', 'border-red-300'];
-        return [];
-    }
-
     bindEvents() {
+        // Dark Mode Toggle
+        const themeToggle = document.getElementById('theme-toggle');
+        if (themeToggle) {
+            themeToggle.addEventListener('click', () => {
+                const root = document.documentElement;
+                if (root.classList.contains('dark')) {
+                    root.classList.replace('dark', 'light');
+                } else {
+                    root.classList.replace('light', 'dark');
+                }
+            });
+        }
+
         if (this.searchInput) {
             this.searchInput.addEventListener('input', () => this.markSearchReady());
             this.searchInput.addEventListener('keypress', (e) => {
@@ -67,13 +70,8 @@ class App {
             });
         }
 
-        if (this.sortSelect) {
-            this.sortSelect.addEventListener('change', () => this.markSearchReady());
-        }
-        
-        if (this.loadAllToggle) {
-            this.loadAllToggle.addEventListener('change', () => this.executeSearch());
-        }
+        if (this.sortSelect) this.sortSelect.addEventListener('change', () => this.markSearchReady());
+        if (this.loadAllToggle) this.loadAllToggle.addEventListener('change', () => this.executeSearch());
 
         const inputIds = [
             'min-credits', 'max-credits', 'start-time', 'end-time', 
@@ -104,17 +102,18 @@ class App {
             this.markSearchReady();
         });
 
+        // Toggle Events for Day Mode
         const modeBtns = document.querySelectorAll('.mode-btn');
         const modeDesc = document.getElementById('day-mode-desc');
         modeBtns.forEach(btn => {
             btn.addEventListener('click', (e) => {
                 modeBtns.forEach(b => {
-                    b.classList.remove('bg-white', 'shadow-sm', 'text-slate-700', 'active');
-                    b.classList.add('text-slate-500');
+                    b.classList.remove('bg-theme-surface', 'shadow-sm', 'text-theme-text-main', 'active');
+                    b.classList.add('text-theme-text-muted');
                 });
                 const target = e.target;
-                target.classList.remove('text-slate-500');
-                target.classList.add('bg-white', 'shadow-sm', 'text-slate-700', 'active');
+                target.classList.remove('text-theme-text-muted');
+                target.classList.add('bg-theme-surface', 'shadow-sm', 'text-theme-text-main', 'active');
                 
                 if (target.dataset.mode === 'include') {
                     modeDesc.textContent = "Must meet on ALL selected days";
@@ -125,36 +124,38 @@ class App {
             });
         });
 
-        // Updated TBA buttons to match the day-mode toggle exactly
+        // Toggle Events for TBA Mode
         const tbaBtns = document.querySelectorAll('.tba-btn');
         tbaBtns.forEach(btn => {
             btn.addEventListener('click', (e) => {
                 tbaBtns.forEach(b => {
-                    b.classList.remove('bg-white', 'shadow-sm', 'text-slate-700', 'active');
-                    b.classList.add('text-slate-500');
+                    b.classList.remove('bg-theme-surface', 'shadow-sm', 'text-theme-text-main', 'active');
+                    b.classList.add('text-theme-text-muted');
                 });
                 const target = e.target;
-                target.classList.remove('text-slate-500');
-                target.classList.add('bg-white', 'shadow-sm', 'text-slate-700', 'active');
+                target.classList.remove('text-theme-text-muted');
+                target.classList.add('bg-theme-surface', 'shadow-sm', 'text-theme-text-main', 'active');
                 this.markSearchReady();
             });
         });
 
-        // Quarter Filtering Buttons (Color toggling)
+        // Semantic Toggle for Quarter Buttons
         document.querySelectorAll('.quarter-btn').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 const t = e.target;
                 const q = t.dataset.quarter;
-                const activeStyles = this._getQuarterStyles(q);
-                const defaultStyles = ['bg-white', 'text-slate-600', 'border-slate-300', 'hover:bg-slate-50'];
+                const qClass = `badge-${q.toLowerCase()}`;
+                
+                // Removed 'hover:bg-theme-surface-hover' to not overwrite custom CSS hover states
+                const defaultStyles = ['bg-theme-surface', 'text-theme-text-main', 'border-theme-border'];
                 
                 t.classList.toggle('active');
                 
                 if (t.classList.contains('active')) {
                     t.classList.remove(...defaultStyles);
-                    t.classList.add(...activeStyles);
+                    t.classList.add(qClass);
                 } else {
-                    t.classList.remove(...activeStyles);
+                    t.classList.remove(qClass);
                     t.classList.add(...defaultStyles);
                 }
                 
@@ -162,22 +163,20 @@ class App {
             });
         });
 
-        // Other generic filter buttons/chips (Standardized to purple-700)
+        // Semantic Toggle for Generic Filter Chips
         document.querySelectorAll('.filter-btn, .filter-chip').forEach(btn => {
-            if (btn.classList.contains('quarter-btn')) return; // handled above
+            if (btn.classList.contains('quarter-btn')) return;
 
             btn.addEventListener('click', (e) => {
                 const t = e.target;
                 t.classList.toggle('active');
                 
                 if (t.classList.contains('active')) {
-                    t.classList.remove('border-slate-300', 'text-slate-600', 'bg-white', 'hover:bg-slate-50', 'hover:bg-slate-100');
-                    t.classList.add('border-purple-300', 'bg-purple-50', 'text-purple-700');
+                    t.classList.remove('border-theme-border', 'text-theme-text-main', 'bg-theme-surface', 'hover:bg-theme-surface-hover');
+                    t.classList.add('border-theme-accent-main', 'bg-theme-accent-bg', 'text-theme-accent-text');
                 } else {
-                    t.classList.add('border-slate-300', 'text-slate-600', 'bg-white');
-                    t.classList.remove('border-purple-300', 'bg-purple-50', 'text-purple-700');
-                    if (t.classList.contains('filter-chip')) t.classList.add('hover:bg-slate-100');
-                    if (t.classList.contains('filter-btn')) t.classList.add('hover:bg-slate-50');
+                    t.classList.add('border-theme-border', 'text-theme-text-main', 'bg-theme-surface', 'hover:bg-theme-surface-hover');
+                    t.classList.remove('border-theme-accent-main', 'bg-theme-accent-bg', 'text-theme-accent-text');
                 }
                 
                 this.markSearchReady();
@@ -186,7 +185,6 @@ class App {
     }
 
     resetFilters() {
-        // 1. Text & Numeric Inputs
         if (this.searchInput) this.searchInput.value = '';
         
         const ids = [
@@ -198,69 +196,63 @@ class App {
             if (el) el.value = '';
         });
 
-        // 2. Selects & Toggles
         if (this.sortSelect) this.sortSelect.value = 'newest';
         if (this.loadAllToggle) this.loadAllToggle.checked = false;
         
         const timeScope = document.getElementById('time-scope');
         if (timeScope) timeScope.value = 'primary';
 
-        // Clear quarter dropdown colors
+        // Clear quarter dropdown colors properly
         ['start-quarter', 'end-quarter'].forEach(id => {
             const el = document.getElementById(id);
             if (el) this.updateQuarterColor(el);
         });
 
-        // 3. Checkboxes
         document.querySelectorAll('.type-checkbox').forEach(cb => cb.checked = false);
         document.querySelectorAll('.major-checkbox').forEach(cb => {
             cb.checked = cb.value === 'ALL';
         });
 
-        // 4. Custom Filter Buttons (Active States)
+        // Reset Filter Chips
         document.querySelectorAll('.filter-btn, .filter-chip').forEach(t => {
-            if (t.classList.contains('quarter-btn')) return; // handled separately
-            t.classList.remove('active', 'border-purple-300', 'bg-purple-50', 'text-purple-700');
-            t.classList.add('border-slate-300', 'text-slate-600', 'bg-white');
-            if (t.classList.contains('filter-chip')) t.classList.add('hover:bg-slate-100');
-            if (t.classList.contains('filter-btn')) t.classList.add('hover:bg-slate-50');
+            if (t.classList.contains('quarter-btn')) return;
+            t.classList.remove('active', 'border-theme-accent-main', 'bg-theme-accent-bg', 'text-theme-accent-text');
+            t.classList.add('border-theme-border', 'text-theme-text-main', 'bg-theme-surface', 'hover:bg-theme-surface-hover');
         });
 
-        // Quarter Buttons Reset
+        // Reset Quarter Buttons
         document.querySelectorAll('.quarter-btn').forEach(t => {
-            const q = t.dataset.quarter;
-            const activeStyles = this._getQuarterStyles(q);
-            t.classList.remove('active', ...activeStyles);
-            t.classList.add('bg-white', 'text-slate-600', 'border-slate-300', 'hover:bg-slate-50');
+            const qClass = `badge-${t.dataset.quarter.toLowerCase()}`;
+            t.classList.remove('active', qClass);
+            t.classList.add('bg-theme-surface', 'text-theme-text-main', 'border-theme-border');
         });
 
-        // 5. Day Mode Reset
+        // Reset Mode Toggles
         const modeBtns = document.querySelectorAll('.mode-btn');
         const modeDesc = document.getElementById('day-mode-desc');
         modeBtns.forEach(btn => {
             if (btn.dataset.mode === 'include') {
-                btn.classList.add('bg-white', 'shadow-sm', 'text-slate-700', 'active');
-                btn.classList.remove('text-slate-500');
+                btn.classList.add('bg-theme-surface', 'shadow-sm', 'text-theme-text-main', 'active');
+                btn.classList.remove('text-theme-text-muted');
                 if (modeDesc) modeDesc.textContent = "Must meet on ALL selected days";
             } else {
-                btn.classList.remove('bg-white', 'shadow-sm', 'text-slate-700', 'active');
-                btn.classList.add('text-slate-500');
+                btn.classList.remove('bg-theme-surface', 'shadow-sm', 'text-theme-text-main', 'active');
+                btn.classList.add('text-theme-text-muted');
             }
         });
 
-        // 6. TBA Reset (Standardized style)
         const tbaBtns = document.querySelectorAll('.tba-btn');
         tbaBtns.forEach(btn => {
             if (btn.dataset.tba === 'include') {
-                btn.classList.add('bg-white', 'shadow-sm', 'text-slate-700', 'active');
-                btn.classList.remove('text-slate-500');
+                btn.classList.add('bg-theme-surface', 'shadow-sm', 'text-theme-text-main', 'active');
+                btn.classList.remove('text-theme-text-muted');
             } else {
-                btn.classList.remove('bg-white', 'shadow-sm', 'text-slate-700', 'active');
-                btn.classList.add('text-slate-500');
+                btn.classList.remove('bg-theme-surface', 'shadow-sm', 'text-theme-text-main', 'active');
+                btn.classList.add('text-theme-text-muted');
             }
         });
 
-        // 7. Reset Internal State & Clear UI
+        // Reset Internals
         this.currentQuery = '';
         this.currentAllIds = [];
         this.currentOffset = 0;
@@ -268,9 +260,9 @@ class App {
 
         this.ui.container.innerHTML = `
             <div class="text-center py-20">
-                <i data-lucide="info" class="w-12 h-12 text-slate-400 mx-auto mb-3"></i>
-                <h3 class="text-lg font-medium text-slate-700">Filters Reset</h3>
-                <p class="text-slate-500 text-sm mt-1">Enter a search term or select filters to see results.</p>
+                <i data-lucide="info" class="w-12 h-12 text-theme-text-muted mx-auto mb-3"></i>
+                <h3 class="text-lg font-medium text-theme-text-main">Filters Reset</h3>
+                <p class="text-theme-text-muted text-sm mt-1">Enter a search term or select filters to see results.</p>
             </div>`;
         if (window.lucide) lucide.createIcons();
         
@@ -278,18 +270,24 @@ class App {
         
         if (this.searchBtn) {
             this.searchBtn.disabled = true;
-            this.searchBtn.classList.add('bg-slate-300', 'text-slate-500', 'cursor-not-allowed');
-            this.searchBtn.classList.remove('bg-purple-700', 'text-white', 'hover:bg-purple-800', 'shadow-md');
+            this.searchBtn.classList.add('bg-theme-border', 'text-theme-text-muted', 'cursor-not-allowed');
+            this.searchBtn.classList.remove('bg-theme-accent-main', 'text-theme-text-inverse', 'hover:bg-theme-accent-hover', 'shadow-md');
         }
     }
 
     updateQuarterColor(selectEl) {
         const val = selectEl.value;
-        if (val === 'AUT') selectEl.style.backgroundColor = '#ffcccc';
-        else if (val === 'WIN') selectEl.style.backgroundColor = '#99ccff';
-        else if (val === 'SPR') selectEl.style.backgroundColor = '#ccffcc';
-        else if (val === 'SUM') selectEl.style.backgroundColor = '#ffffcc';
-        else selectEl.style.backgroundColor = '';
+        const qClasses = ['badge-aut', 'badge-win', 'badge-spr', 'badge-sum'];
+        const defaultClasses = ['bg-theme-surface', 'text-theme-text-main'];
+        
+        // Strip off all active quarter and default classes first to avoid conflicts
+        selectEl.classList.remove(...qClasses, ...defaultClasses);
+        
+        if (val && val !== '') {
+            selectEl.classList.add(`badge-${val.toLowerCase()}`);
+        } else {
+            selectEl.classList.add(...defaultClasses);
+        }
     }
 
     bindMajorEvents() {
@@ -315,12 +313,11 @@ class App {
             const clearBtn = document.getElementById('clear-majors');
             const container = clearBtn.parentElement.parentElement.querySelector('.max-h-36');
             
-            // Standardized purple accent color
-            let html = `<label class="flex items-center gap-2 cursor-pointer hover:bg-slate-200 p-1 rounded transition-colors"><input type="checkbox" class="accent-purple-700 major-checkbox" value="ALL" checked> All Departments</label>`;
+            let html = `<label class="flex items-center gap-2 cursor-pointer hover:bg-theme-surface-hover p-1 rounded transition-colors"><input type="checkbox" class="accent-theme-accent-main major-checkbox" value="ALL" checked> All Departments</label>`;
             
             majors.forEach(m => {
                 const displayName = m.name ? `${m.prefix} - ${m.name}` : m.prefix;
-                html += `<label class="flex items-center gap-2 cursor-pointer hover:bg-slate-200 p-1 rounded transition-colors"><input type="checkbox" class="accent-purple-700 major-checkbox" value="${m.prefix}"> ${displayName}</label>`;
+                html += `<label class="flex items-center gap-2 cursor-pointer hover:bg-theme-surface-hover p-1 rounded transition-colors"><input type="checkbox" class="accent-theme-accent-main major-checkbox" value="${m.prefix}"> ${displayName}</label>`;
             });
 
             container.innerHTML = html;
@@ -361,7 +358,6 @@ class App {
     }
 
     harvestFilters() {
-        const getCheckedValues = (selector) => Array.from(document.querySelectorAll(selector)).map(cb => cb.value || cb.dataset.type || cb.dataset.level);
         const getInputValue = (id) => {
             const el = document.getElementById(id);
             return el ? el.value : '';
@@ -393,7 +389,7 @@ class App {
             attributes: attributes,
             daysInclude: dayMode === 'include' ? activeDays : [],
             daysExclude: dayMode === 'exclude' ? activeDays : [],
-            quarters: activeQuarters, // Handing over to SQL
+            quarters: activeQuarters,
             tbaMode: tbaMode,
             levels: activeLevels,
             sectionTypes: activeSectionTypes,
@@ -411,9 +407,8 @@ class App {
     markSearchReady() {
         if (!this.searchBtn) return;
         this.searchBtn.disabled = false;
-        this.searchBtn.classList.remove('bg-slate-300', 'text-slate-500', 'cursor-not-allowed');
-        // Standardized on purple-700
-        this.searchBtn.classList.add('bg-purple-700', 'text-white', 'hover:bg-purple-800', 'shadow-md');
+        this.searchBtn.classList.remove('bg-theme-border', 'text-theme-text-muted', 'cursor-not-allowed');
+        this.searchBtn.classList.add('bg-theme-accent-main', 'text-theme-text-inverse', 'hover:bg-theme-accent-hover', 'shadow-md');
     }
 
     async init() {
@@ -440,8 +435,8 @@ class App {
         
         if (this.searchBtn) {
             this.searchBtn.disabled = true;
-            this.searchBtn.classList.add('bg-slate-300', 'text-slate-500', 'cursor-not-allowed');
-            this.searchBtn.classList.remove('bg-purple-700', 'text-white', 'hover:bg-purple-800', 'shadow-md');
+            this.searchBtn.classList.add('bg-theme-border', 'text-theme-text-muted', 'cursor-not-allowed');
+            this.searchBtn.classList.remove('bg-theme-accent-main', 'text-theme-text-inverse', 'hover:bg-theme-accent-hover', 'shadow-md');
         }
         
         this.ui.showLoading();
@@ -473,7 +468,7 @@ class App {
         } catch (error) {
             console.error("Search failed:", error);
             if (this.ui.container) {
-                this.ui.container.innerHTML = `<div class="text-red-500 p-8 text-center font-bold">Query Error Occurred.</div>`;
+                this.ui.container.innerHTML = `<div class="text-theme-status-err p-8 text-center font-bold">Query Error Occurred.</div>`;
             }
         }
     }
