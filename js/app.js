@@ -1,277 +1,315 @@
 import { DatabaseManager } from './database.js';
 import { UIManager } from './ui.js';
+import { AppStore } from './store.js';
+import { CourseService } from './service.js';
 
 class App {
     constructor() {
         this.db = new DatabaseManager("data/config.json");
         this.ui = new UIManager();
+        this.store = new AppStore();
         
-        this.searchInput = document.getElementById('omni-search');
-        this.searchBtn = document.getElementById('search-btn');
-        this.sortSelect = document.getElementById('sort-select');
-        this.loadAllToggle = document.getElementById('load-all-toggle');
-        this.resetBtn = document.getElementById('reset-filters-btn');
+        this.currentSearchController = null; // Used for Race Condition Prevention
         
-        this.currentQuery = '';
-        this.isExpanded = false; 
-        
-        this.currentAllIds = [];
-        this.currentOffset = 0;
-        this.currentSortBy = 'newest';
-        this.isLoadingMore = false;
-        this.observer = null;
+        // Centralized DOM Element Caching
+        this.dom = {
+            searchInput   : document.getElementById('omni-search'),
+            searchBtn     : document.getElementById('search-btn'),
+            sortSelect    : document.getElementById('sort-select'),
+            loadAllToggle : document.getElementById('load-all-toggle'),
+            resetBtn      : document.getElementById('reset-filters-btn'),
+            themeToggle   : document.getElementById('theme-toggle'),
+            expandBtn     : document.getElementById('expand-all-btn'),
+            collapseBtn   : document.getElementById('collapse-all-btn'),
+            sidebar       : document.querySelector('aside'),
+            timeScope     : document.getElementById('time-scope'),
+            modeDesc      : document.getElementById('day-mode-desc'),
+            clearMajorsBtn: document.getElementById('clear-majors'),
+            filterInputs  : [
+                'min-credits', 'max-credits', 'start-time', 'end-time', 
+                'start-year', 'start-quarter', 'end-year', 'end-quarter'
+            ]
+        };
 
-        this.bindEvents();
+        this.initEvents();
     }
 
-    bindEvents() {
-        // Dark Mode Toggle
-        const themeToggle = document.getElementById('theme-toggle');
-        if (themeToggle) {
-            themeToggle.addEventListener('click', () => {
+    initEvents() {
+        this._bindThemeToggle();
+        this._bindSearchControls();
+        this._bindSidebarDelegation();
+        this._bindInputListeners();
+    }
+
+    _bindThemeToggle() {
+        if (this.dom.themeToggle) {
+            this.dom.themeToggle.addEventListener('click', () => {
                 const root = document.documentElement;
-                if (root.classList.contains('dark')) {
-                    root.classList.replace('dark', 'light');
-                } else {
-                    root.classList.replace('light', 'dark');
-                }
+                root.classList.toggle('dark');
+                root.classList.toggle('light');
             });
         }
+    }
 
-        if (this.searchInput) {
-            this.searchInput.addEventListener('input', () => this.markSearchReady());
-            this.searchInput.addEventListener('keypress', (e) => {
-                if (e.key === 'Enter' && !this.searchBtn.disabled) this.executeSearch();
+    _bindSearchControls() {
+        if (this.dom.searchInput) {
+            this.dom.searchInput.addEventListener('input', (e) => {
+                this.store.setFilter('query', e.target.value);
+                this.markSearchReady();
+            });
+            this.dom.searchInput.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter' && !this.dom.searchBtn.disabled) this.executeSearch();
             });
         }
         
-        if (this.searchBtn) {
-            this.searchBtn.addEventListener('click', () => this.executeSearch());
+        if (this.dom.searchBtn) {
+            this.dom.searchBtn.addEventListener('click', () => this.executeSearch());
         }
 
-        if (this.resetBtn) {
-            this.resetBtn.addEventListener('click', () => this.resetFilters());
+        if (this.dom.resetBtn) {
+            this.dom.resetBtn.addEventListener('click', () => this.resetFilters());
         }
 
-        const expandBtn = document.getElementById('expand-all-btn');
-        const collapseBtn = document.getElementById('collapse-all-btn');
-        
-        if (expandBtn) {
-            expandBtn.addEventListener('click', () => {
-                this.isExpanded = true;
+        if (this.dom.expandBtn) {
+            this.dom.expandBtn.addEventListener('click', () => {
+                this.store.state.isExpanded = true;
                 this.ui.toggleAll(true);
             });
         }
         
-        if (collapseBtn) {
-            collapseBtn.addEventListener('click', () => {
-                this.isExpanded = false;
+        if (this.dom.collapseBtn) {
+            this.dom.collapseBtn.addEventListener('click', () => {
+                this.store.state.isExpanded = false;
                 this.ui.toggleAll(false);
             });
         }
 
-        if (this.sortSelect) this.sortSelect.addEventListener('change', () => this.markSearchReady());
-        if (this.loadAllToggle) this.loadAllToggle.addEventListener('change', () => this.executeSearch());
+        if (this.dom.sortSelect) {
+            this.dom.sortSelect.addEventListener('change', (e) => {
+                this.store.setFilter('sortBy', e.target.value);
+                this.markSearchReady();
+            });
+        }
 
-        const inputIds = [
-            'min-credits', 'max-credits', 'start-time', 'end-time', 
-            'start-year', 'start-quarter', 'end-year', 'end-quarter', 'time-scope'
-        ];
-        inputIds.forEach(id => {
-            const el = document.getElementById(id);
-            if (el) el.addEventListener('input', () => this.markSearchReady());
-        });
+        if (this.dom.loadAllToggle) {
+            this.dom.loadAllToggle.addEventListener('change', (e) => {
+                this.store.setFilter('loadAll', e.target.checked);
+                this.executeSearch();
+            });
+        }
+    }
 
-        // Dynamic Quarter Dropdown Colors for Term Range Filter
-        ['start-quarter', 'end-quarter'].forEach(id => {
+    _bindInputListeners() {
+        // Sync Store on text/number inputs
+        this.dom.filterInputs.forEach(id => {
             const el = document.getElementById(id);
             if (el) {
-                el.addEventListener('change', (e) => this.updateQuarterColor(e.target));
+                el.addEventListener('input', (e) => {
+                    // map HTML id (min-credits) to store key (minCredits)
+                    const key = id.replace(/-([a-z])/g, (g) => g[1].toUpperCase());
+                    this.store.setFilter(key, e.target.value);
+                    this.markSearchReady();
+                });
+            }
+        });
+        
+        if (this.dom.timeScope) {
+            this.dom.timeScope.addEventListener('change', (e) => {
+                this.store.setFilter('timeScope', e.target.value);
+                this.markSearchReady();
+            });
+        }
+
+        // Quarter Dropdown Colors
+        ['start-quarter', 'end-quarter'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.addEventListener('change', (e) => this.updateQuarterColor(e.target));
+        });
+        
+        // Clear Majors
+        if (this.dom.clearMajorsBtn) {
+            this.dom.clearMajorsBtn.addEventListener('click', () => {
+                document.querySelectorAll('.major-checkbox').forEach(box => {
+                    box.checked = box.value === 'ALL';
+                });
+                this.store.setFilter('majors', []);
+                this.markSearchReady();
+            });
+        }
+    }
+
+    _bindSidebarDelegation() {
+        // Handle Button Clicks
+        this.dom.sidebar.addEventListener('click', (e) => {
+            const target = e.target;
+
+            // 1. Semantic Toggle for Quarter Buttons
+            if (target.closest('.quarter-btn')) {
+                const btn = target.closest('.quarter-btn');
+                this._toggleQuarterButton(btn);
+                this.store.toggleArrayFilter('quarters', btn.dataset.quarter);
+                this.markSearchReady();
+            }
+            // 2. Filter Chips and Level Buttons
+            else if (target.closest('.filter-btn:not(.quarter-btn), .filter-chip')) {
+                const btn = target.closest('.filter-btn:not(.quarter-btn), .filter-chip');
+                this._toggleFilterButton(btn);
+                
+                if (btn.classList.contains('day-btn')) {
+                    const currentMode = document.querySelector('.mode-btn.active')?.dataset.mode || 'include';
+                    this.store.toggleArrayFilter(currentMode === 'include' ? 'daysInclude' : 'daysExclude', btn.dataset.day);
+                }
+                else if (btn.classList.contains('level-btn')) this.store.toggleArrayFilter('levels', btn.dataset.level);
+                else this.store.toggleArrayFilter('attributes', btn.dataset.attr);
+                
+                this.markSearchReady();
+            }
+            // 3. Day Mode Toggle (Include/Exclude)
+            else if (target.closest('.mode-btn')) {
+                const btn = target.closest('.mode-btn');
+                this._handleRadioToggleGroup('.mode-btn', btn);
+                const mode = btn.dataset.mode;
+                
+                if (this.dom.modeDesc) {
+                    this.dom.modeDesc.textContent = mode === 'include' ? "Must meet on ALL selected days" : "Cannot meet on ANY selected day";
+                }
+                
+                // Swap the array storage based on mode
+                if (mode === 'include') {
+                    this.store.setFilter('daysInclude', [...this.store.filters.daysExclude]);
+                    this.store.setFilter('daysExclude', []);
+                } else {
+                    this.store.setFilter('daysExclude', [...this.store.filters.daysInclude]);
+                    this.store.setFilter('daysInclude', []);
+                }
+                this.markSearchReady();
+            }
+            // 4. TBA Mode Toggle
+            else if (target.closest('.tba-btn')) {
+                const btn = target.closest('.tba-btn');
+                this._handleRadioToggleGroup('.tba-btn', btn);
+                this.store.setFilter('tbaMode', btn.dataset.tba);
+                this.markSearchReady();
             }
         });
 
-        document.querySelectorAll('.type-checkbox').forEach(cb => {
-            cb.addEventListener('change', () => this.markSearchReady());
-        });
-
-        document.getElementById('clear-majors').addEventListener('click', () => {
-            const majorCheckboxes = document.querySelectorAll('.major-checkbox');
-            majorCheckboxes.forEach(box => {
-                box.checked = box.value === 'ALL';
-            });
-            this.markSearchReady();
-        });
-
-        // Toggle Events for Day Mode
-        const modeBtns = document.querySelectorAll('.mode-btn');
-        const modeDesc = document.getElementById('day-mode-desc');
-        modeBtns.forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                modeBtns.forEach(b => {
-                    b.classList.remove('bg-theme-surface', 'shadow-sm', 'text-theme-text-main', 'active');
-                    b.classList.add('text-theme-text-muted');
-                });
-                const target = e.target;
-                target.classList.remove('text-theme-text-muted');
-                target.classList.add('bg-theme-surface', 'shadow-sm', 'text-theme-text-main', 'active');
-                
-                if (target.dataset.mode === 'include') {
-                    modeDesc.textContent = "Must meet on ALL selected days";
-                } else {
-                    modeDesc.textContent = "Cannot meet on ANY selected day";
-                }
+        // Handle Checkbox Changes
+        this.dom.sidebar.addEventListener('change', (e) => {
+            const target = e.target;
+            
+            if (target.classList.contains('type-checkbox')) {
+                this.store.toggleArrayFilter('sectionTypes', target.dataset.type);
                 this.markSearchReady();
-            });
-        });
-
-        // Toggle Events for TBA Mode
-        const tbaBtns = document.querySelectorAll('.tba-btn');
-        tbaBtns.forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                tbaBtns.forEach(b => {
-                    b.classList.remove('bg-theme-surface', 'shadow-sm', 'text-theme-text-main', 'active');
-                    b.classList.add('text-theme-text-muted');
-                });
-                const target = e.target;
-                target.classList.remove('text-theme-text-muted');
-                target.classList.add('bg-theme-surface', 'shadow-sm', 'text-theme-text-main', 'active');
+            } 
+            else if (target.classList.contains('major-checkbox')) {
+                this._handleMajorCheckboxChange(target);
                 this.markSearchReady();
-            });
-        });
-
-        // Semantic Toggle for Quarter Buttons
-        document.querySelectorAll('.quarter-btn').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                const t = e.target;
-                const q = t.dataset.quarter;
-                const qClass = `badge-${q.toLowerCase()}`;
-                
-                // Removed 'hover:bg-theme-surface-hover' to not overwrite custom CSS hover states
-                const defaultStyles = ['bg-theme-surface', 'text-theme-text-main', 'border-theme-border'];
-                
-                t.classList.toggle('active');
-                
-                if (t.classList.contains('active')) {
-                    t.classList.remove(...defaultStyles);
-                    t.classList.add(qClass);
-                } else {
-                    t.classList.remove(qClass);
-                    t.classList.add(...defaultStyles);
-                }
-                
-                this.markSearchReady();
-            });
-        });
-
-        // Semantic Toggle for Generic Filter Chips
-        document.querySelectorAll('.filter-btn, .filter-chip').forEach(btn => {
-            if (btn.classList.contains('quarter-btn')) return;
-
-            btn.addEventListener('click', (e) => {
-                const t = e.target;
-                t.classList.toggle('active');
-                
-                if (t.classList.contains('active')) {
-                    t.classList.remove('border-theme-border', 'text-theme-text-main', 'bg-theme-surface', 'hover:bg-theme-surface-hover');
-                    t.classList.add('border-theme-accent-main', 'bg-theme-accent-bg', 'text-theme-accent-text');
-                } else {
-                    t.classList.add('border-theme-border', 'text-theme-text-main', 'bg-theme-surface', 'hover:bg-theme-surface-hover');
-                    t.classList.remove('border-theme-accent-main', 'bg-theme-accent-bg', 'text-theme-accent-text');
-                }
-                
-                this.markSearchReady();
-            });
+            }
         });
     }
 
-    resetFilters() {
-        if (this.searchInput) this.searchInput.value = '';
+    _toggleQuarterButton(btn) {
+        const qClass = `badge-${btn.dataset.quarter.toLowerCase()}`;
+        const defaultStyles = ['bg-theme-surface', 'text-theme-text-main', 'border-theme-border'];
         
-        const ids = [
-            'min-credits', 'max-credits', 'start-time', 'end-time', 
-            'start-year', 'start-quarter', 'end-year', 'end-quarter'
-        ];
-        ids.forEach(id => {
+        if (btn.classList.toggle('active')) {
+            btn.classList.remove(...defaultStyles);
+            btn.classList.add(qClass);
+        } else {
+            btn.classList.remove(qClass);
+            btn.classList.add(...defaultStyles);
+        }
+    }
+
+    _toggleFilterButton(btn) {
+        if (btn.classList.toggle('active')) {
+            btn.classList.remove('border-theme-border', 'text-theme-text-main', 'bg-theme-surface', 'hover:bg-theme-surface-hover');
+            btn.classList.add('border-theme-accent-main', 'bg-theme-accent-bg', 'text-theme-accent-text');
+        } else {
+            btn.classList.add('border-theme-border', 'text-theme-text-main', 'bg-theme-surface', 'hover:bg-theme-surface-hover');
+            btn.classList.remove('border-theme-accent-main', 'bg-theme-accent-bg', 'text-theme-accent-text');
+        }
+    }
+
+    _handleRadioToggleGroup(selector, activeBtn) {
+        document.querySelectorAll(selector).forEach(b => {
+            b.classList.remove('bg-theme-surface', 'shadow-sm', 'text-theme-text-main', 'active');
+            b.classList.add('text-theme-text-muted');
+        });
+        activeBtn.classList.remove('text-theme-text-muted');
+        activeBtn.classList.add('bg-theme-surface', 'shadow-sm', 'text-theme-text-main', 'active');
+    }
+
+    _handleMajorCheckboxChange(target) {
+        const majorCheckboxes = document.querySelectorAll('.major-checkbox');
+        const allBox = document.querySelector('.major-checkbox[value="ALL"]');
+        
+        if (target.value === 'ALL' && target.checked) {
+            majorCheckboxes.forEach(box => { if (box.value !== 'ALL') box.checked = false; });
+            this.store.setFilter('majors', []);
+        } else if (target.value !== 'ALL' && target.checked) {
+            if (allBox) allBox.checked = false;
+            this.store.toggleArrayFilter('majors', target.value);
+        } else if (target.value !== 'ALL' && !target.checked) {
+             this.store.toggleArrayFilter('majors', target.value);
+             
+             // Re-check "All Departments" if the last major is unchecked
+             if (this.store.filters.majors.length === 0 && allBox) {
+                 allBox.checked = true;
+             }
+        }
+    }
+
+    resetFilters() {
+        // Reset DOM Inputs
+        if (this.dom.searchInput) this.dom.searchInput.value = '';
+        if (this.dom.sortSelect) this.dom.sortSelect.value = 'newest';
+        if (this.dom.loadAllToggle) this.dom.loadAllToggle.checked = false;
+        if (this.dom.timeScope) this.dom.timeScope.value = 'primary';
+
+        this.dom.filterInputs.forEach(id => {
             const el = document.getElementById(id);
             if (el) el.value = '';
         });
 
-        if (this.sortSelect) this.sortSelect.value = 'newest';
-        if (this.loadAllToggle) this.loadAllToggle.checked = false;
-        
-        const timeScope = document.getElementById('time-scope');
-        if (timeScope) timeScope.value = 'primary';
-
-        // Clear quarter dropdown colors properly
         ['start-quarter', 'end-quarter'].forEach(id => {
             const el = document.getElementById(id);
             if (el) this.updateQuarterColor(el);
         });
 
         document.querySelectorAll('.type-checkbox').forEach(cb => cb.checked = false);
-        document.querySelectorAll('.major-checkbox').forEach(cb => {
-            cb.checked = cb.value === 'ALL';
-        });
+        document.querySelectorAll('.major-checkbox').forEach(cb => { cb.checked = cb.value === 'ALL'; });
 
-        // Reset Filter Chips
+        // Reset Visual Styles
         document.querySelectorAll('.filter-btn, .filter-chip').forEach(t => {
             if (t.classList.contains('quarter-btn')) return;
             t.classList.remove('active', 'border-theme-accent-main', 'bg-theme-accent-bg', 'text-theme-accent-text');
             t.classList.add('border-theme-border', 'text-theme-text-main', 'bg-theme-surface', 'hover:bg-theme-surface-hover');
         });
 
-        // Reset Quarter Buttons
         document.querySelectorAll('.quarter-btn').forEach(t => {
-            const qClass = `badge-${t.dataset.quarter.toLowerCase()}`;
-            t.classList.remove('active', qClass);
+            t.classList.remove('active', `badge-${t.dataset.quarter.toLowerCase()}`);
             t.classList.add('bg-theme-surface', 'text-theme-text-main', 'border-theme-border');
         });
 
-        // Reset Mode Toggles
-        const modeBtns = document.querySelectorAll('.mode-btn');
-        const modeDesc = document.getElementById('day-mode-desc');
-        modeBtns.forEach(btn => {
-            if (btn.dataset.mode === 'include') {
-                btn.classList.add('bg-theme-surface', 'shadow-sm', 'text-theme-text-main', 'active');
-                btn.classList.remove('text-theme-text-muted');
-                if (modeDesc) modeDesc.textContent = "Must meet on ALL selected days";
-            } else {
-                btn.classList.remove('bg-theme-surface', 'shadow-sm', 'text-theme-text-main', 'active');
-                btn.classList.add('text-theme-text-muted');
-            }
-        });
+        const incModeBtn = document.querySelector('.mode-btn[data-mode="include"]');
+        if (incModeBtn) this._handleRadioToggleGroup('.mode-btn', incModeBtn);
+        if (this.dom.modeDesc) this.dom.modeDesc.textContent = "Must meet on ALL selected days";
 
-        const tbaBtns = document.querySelectorAll('.tba-btn');
-        tbaBtns.forEach(btn => {
-            if (btn.dataset.tba === 'include') {
-                btn.classList.add('bg-theme-surface', 'shadow-sm', 'text-theme-text-main', 'active');
-                btn.classList.remove('text-theme-text-muted');
-            } else {
-                btn.classList.remove('bg-theme-surface', 'shadow-sm', 'text-theme-text-main', 'active');
-                btn.classList.add('text-theme-text-muted');
-            }
-        });
+        const incTbaBtn = document.querySelector('.tba-btn[data-tba="include"]');
+        if (incTbaBtn) this._handleRadioToggleGroup('.tba-btn', incTbaBtn);
 
-        // Reset Internals
-        this.currentQuery = '';
-        this.currentAllIds = [];
-        this.currentOffset = 0;
-        if (this.observer) this.observer.disconnect();
-
-        this.ui.container.innerHTML = `
-            <div class="text-center py-20">
-                <i data-lucide="info" class="w-12 h-12 text-theme-text-muted mx-auto mb-3"></i>
-                <h3 class="text-lg font-medium text-theme-text-main">Filters Reset</h3>
-                <p class="text-theme-text-muted text-sm mt-1">Enter a search term or select filters to see results.</p>
-            </div>`;
-        if (window.lucide) lucide.createIcons();
+        // Reset the Source of Truth
+        this.store.reset();
         
-        if (this.ui.resultCount) this.ui.resultCount.textContent = '0';
+        if (this.store.state.observer) this.store.state.observer.disconnect();
+
+        this.ui.renderEmptyResetState();
         
-        if (this.searchBtn) {
-            this.searchBtn.disabled = true;
-            this.searchBtn.classList.add('bg-theme-border', 'text-theme-text-muted', 'cursor-not-allowed');
-            this.searchBtn.classList.remove('bg-theme-accent-main', 'text-theme-text-inverse', 'hover:bg-theme-accent-hover', 'shadow-md');
+        if (this.dom.searchBtn) {
+            this.dom.searchBtn.disabled = true;
+            this.dom.searchBtn.classList.add('bg-theme-border', 'text-theme-text-muted', 'cursor-not-allowed');
+            this.dom.searchBtn.classList.remove('bg-theme-accent-main', 'text-theme-text-inverse', 'hover:bg-theme-accent-hover', 'shadow-md');
         }
     }
 
@@ -280,7 +318,6 @@ class App {
         const qClasses = ['badge-aut', 'badge-win', 'badge-spr', 'badge-sum'];
         const defaultClasses = ['bg-theme-surface', 'text-theme-text-main'];
         
-        // Strip off all active quarter and default classes first to avoid conflicts
         selectEl.classList.remove(...qClasses, ...defaultClasses);
         
         if (val && val !== '') {
@@ -290,28 +327,10 @@ class App {
         }
     }
 
-    bindMajorEvents() {
-        const majorCheckboxes = document.querySelectorAll('.major-checkbox');
-        majorCheckboxes.forEach(cb => {
-            cb.addEventListener('change', (e) => {
-                const target = e.target;
-                if (target.value === 'ALL' && target.checked) {
-                    majorCheckboxes.forEach(box => { if (box.value !== 'ALL') box.checked = false; });
-                } else if (target.value !== 'ALL' && target.checked) {
-                    const allBox = document.querySelector('.major-checkbox[value="ALL"]');
-                    if (allBox) allBox.checked = false;
-                }
-                this.markSearchReady();
-            });
-        });
-    }
-
     async populateDynamicMajors() {
         try {
             const majors = await this.db.getUniqueMajors();
-            
-            const clearBtn = document.getElementById('clear-majors');
-            const container = clearBtn.parentElement.parentElement.querySelector('.max-h-36');
+            const container = this.dom.clearMajorsBtn.parentElement.parentElement.querySelector('.max-h-36');
             
             let html = `<label class="flex items-center gap-2 cursor-pointer hover:bg-theme-surface-hover p-1 rounded transition-colors"><input type="checkbox" class="accent-theme-accent-main major-checkbox" value="ALL" checked> All Departments</label>`;
             
@@ -321,94 +340,27 @@ class App {
             });
 
             container.innerHTML = html;
-            this.bindMajorEvents();
             
-            const majorFilterInput = clearBtn.parentElement.parentElement.querySelector('input[type="text"]');
+            const majorFilterInput = this.dom.clearMajorsBtn.parentElement.parentElement.querySelector('input[type="text"]');
             if (majorFilterInput) {
                 majorFilterInput.addEventListener('input', (e) => {
                     const term = e.target.value.toLowerCase();
-                    const labels = container.querySelectorAll('label');
-                    labels.forEach(label => {
-                        if (label.querySelector('input').value === 'ALL' || label.textContent.toLowerCase().includes(term)) {
-                            label.style.display = 'flex';
-                        } else {
-                            label.style.display = 'none';
-                        }
+                    container.querySelectorAll('label').forEach(label => {
+                        const isAll = label.querySelector('input').value === 'ALL';
+                        label.style.display = (isAll || label.textContent.toLowerCase().includes(term)) ? 'flex' : 'none';
                     });
                 });
             }
-
         } catch (error) {
             console.error("Failed to load dynamic majors:", error);
         }
     }
 
-    _getTermCode(yearStr, quarterStr, isStartBound) {
-        if (!yearStr) return null;
-        const year = parseInt(yearStr);
-        if (isNaN(year)) return null;
-        
-        const weights = { "WIN": 1, "SPR": 2, "SUM": 3, "AUT": 4 };
-        let qWeight = quarterStr ? weights[quarterStr.toUpperCase()] : null;
-        
-        if (!qWeight) {
-            qWeight = isStartBound ? 1 : 4; 
-        }
-        return parseInt(`${year}${qWeight}`);
-    }
-
-    harvestFilters() {
-        const getInputValue = (id) => {
-            const el = document.getElementById(id);
-            return el ? el.value : '';
-        };
-
-        const attributes = Array.from(document.querySelectorAll('.filter-chip.active')).map(btn => btn.dataset.attr);
-        const activeDays = Array.from(document.querySelectorAll('.day-btn.active')).map(btn => btn.dataset.day);
-        const activeLevels = Array.from(document.querySelectorAll('.level-btn.active')).map(btn => btn.dataset.level);
-        const activeSectionTypes = Array.from(document.querySelectorAll('.type-checkbox:checked')).map(cb => cb.dataset.type);
-        const activeQuarters = Array.from(document.querySelectorAll('.quarter-btn.active')).map(btn => btn.dataset.quarter);
-        
-        const activeMajors = Array.from(document.querySelectorAll('.major-checkbox:checked'))
-                                  .map(cb => cb.value)
-                                  .filter(val => val !== 'ALL');
-        
-        const dayModeBtn = document.querySelector('.mode-btn.active');
-        const dayMode = dayModeBtn ? dayModeBtn.dataset.mode : 'include';
-
-        const tbaBtn = document.querySelector('.tba-btn.active');
-        const tbaMode = tbaBtn ? tbaBtn.dataset.tba : 'include';
-
-        const startYear = getInputValue('start-year');
-        const startQuarter = getInputValue('start-quarter');
-        const endYear = getInputValue('end-year');
-        const endQuarter = getInputValue('end-quarter');
-
-        return {
-            majors: activeMajors,
-            attributes: attributes,
-            daysInclude: dayMode === 'include' ? activeDays : [],
-            daysExclude: dayMode === 'exclude' ? activeDays : [],
-            quarters: activeQuarters,
-            tbaMode: tbaMode,
-            levels: activeLevels,
-            sectionTypes: activeSectionTypes,
-            minCredits: getInputValue('min-credits'),
-            maxCredits: getInputValue('max-credits'),
-            minTermCode: this._getTermCode(startYear, startQuarter, true),
-            maxTermCode: this._getTermCode(endYear, endQuarter, false),
-            timeScope: getInputValue('time-scope') || 'primary',
-            startTime: getInputValue('start-time'),
-            endTime: getInputValue('end-time'),
-            sortBy: this.sortSelect ? this.sortSelect.value : 'newest'
-        };
-    }
-
     markSearchReady() {
-        if (!this.searchBtn) return;
-        this.searchBtn.disabled = false;
-        this.searchBtn.classList.remove('bg-theme-border', 'text-theme-text-muted', 'cursor-not-allowed');
-        this.searchBtn.classList.add('bg-theme-accent-main', 'text-theme-text-inverse', 'hover:bg-theme-accent-hover', 'shadow-md');
+        if (!this.dom.searchBtn) return;
+        this.dom.searchBtn.disabled = false;
+        this.dom.searchBtn.classList.remove('bg-theme-border', 'text-theme-text-muted', 'cursor-not-allowed');
+        this.dom.searchBtn.classList.add('bg-theme-accent-main', 'text-theme-text-inverse', 'hover:bg-theme-accent-hover', 'shadow-md');
     }
 
     async init() {
@@ -416,14 +368,12 @@ class App {
         try {
             await this.db.init();
             this.ui.setReadyStatus();
-            
             await this.populateDynamicMajors();
             
-            if (this.searchInput) {
-                this.searchInput.disabled = false;
-                this.searchInput.value = ""; 
+            if (this.dom.searchInput) {
+                this.dom.searchInput.disabled = false;
+                this.dom.searchInput.value = ""; 
             }
-
         } catch (error) {
             this.ui.setErrorStatus("DB Connection Failed");
             console.error(error);
@@ -431,82 +381,87 @@ class App {
     }
 
     async executeSearch() {
-        this.currentQuery = this.searchInput ? this.searchInput.value.trim() : '';
-        
-        if (this.searchBtn) {
-            this.searchBtn.disabled = true;
-            this.searchBtn.classList.add('bg-theme-border', 'text-theme-text-muted', 'cursor-not-allowed');
-            this.searchBtn.classList.remove('bg-theme-accent-main', 'text-theme-text-inverse', 'hover:bg-theme-accent-hover', 'shadow-md');
+        // Abort the previous search to prevent Race Conditions
+        if (this.currentSearchController) {
+            this.currentSearchController.abort();
+        }
+        this.currentSearchController = new AbortController();
+        const signal = this.currentSearchController.signal;
+
+        if (this.dom.searchBtn) {
+            this.dom.searchBtn.disabled = true;
+            this.dom.searchBtn.classList.add('bg-theme-border', 'text-theme-text-muted', 'cursor-not-allowed');
+            this.dom.searchBtn.classList.remove('bg-theme-accent-main', 'text-theme-text-inverse', 'hover:bg-theme-accent-hover', 'shadow-md');
         }
         
         this.ui.showLoading();
         
         try {
-            const activeFilters = this.harvestFilters();
-            this.currentSortBy = activeFilters.sortBy || 'newest';
+            const limit = this.store.filters.loadAll ? 'all' : 25;
+            const dbResults = await this.db.searchCourses(this.store.filters, limit, signal);
             
-            const bypassChunking = this.loadAllToggle ? this.loadAllToggle.checked : false;
-            const limit = bypassChunking ? 'all' : 25;
-
-            const results = await this.db.searchCourses(this.currentQuery, activeFilters, limit);
+            // Transform Data for UI 
+            const formattedCourses = CourseService.shapeDataForUI(dbResults.rows);
             
-            const uniqueIds = [...new Set(results.allIds || [])];
-            results.allIds = uniqueIds;
-            results.totalMatches = uniqueIds.length;
-
-            this.currentAllIds = uniqueIds;
-            this.currentOffset = limit === 'all' ? this.currentAllIds.length : 25;
+            // Update Store Pagination State
+            this.store.state.currentAllIds = dbResults.allIds;
+            this.store.state.totalMatches = dbResults.totalMatches;
+            this.store.state.currentOffset = limit === 'all' ? dbResults.allIds.length : 25;
             
-            this.ui.renderCourses(results, false); 
+            this.ui.renderCourses(formattedCourses, dbResults.totalMatches, false); 
             this.setupObserver();
             
-            if (this.isExpanded) {
-                this.ui.toggleAll(true);
-            } else if (results.length > 0 && results.length <= 3) {
+            if (this.store.state.isExpanded || (formattedCourses.length > 0 && formattedCourses.length <= 3)) {
                 this.ui.toggleAll(true);
             }
         } catch (error) {
-            console.error("Search failed:", error);
-            if (this.ui.container) {
-                this.ui.container.innerHTML = `<div class="text-theme-status-err p-8 text-center font-bold">Query Error Occurred.</div>`;
+            if (error.name === 'AbortError') {
+                console.log('Search aborted due to a new request.');
+                return;
             }
+            console.error("Search failed:", error);
+            this.ui.renderErrorState();
         }
     }
 
     setupObserver() {
-        if (this.observer) this.observer.disconnect();
+        if (this.store.state.observer) this.store.state.observer.disconnect();
 
         const sentinel = document.getElementById('scroll-sentinel');
         if (!sentinel) return;
 
-        this.observer = new IntersectionObserver(async (entries) => {
+        this.store.state.observer = new IntersectionObserver(async (entries) => {
             const entry = entries[0];
-            if (entry.isIntersecting && !this.isLoadingMore && this.currentOffset < this.currentAllIds.length) {
+            if (entry.isIntersecting && !this.store.state.isLoadingMore && this.store.state.currentOffset < this.store.state.currentAllIds.length) {
                 await this.loadMore();
             }
         }, { rootMargin: '200px' });
 
-        this.observer.observe(sentinel);
+        this.store.state.observer.observe(sentinel);
     }
 
     async loadMore() {
-        this.isLoadingMore = true;
+        this.store.state.isLoadingMore = true;
         this.ui.showLoadingMore(true);
 
         try {
-            const nextIds = this.currentAllIds.slice(this.currentOffset, this.currentOffset + 25);
-            const nextResults = await this.db.hydrateCourses(nextIds, this.currentSortBy);
+            const nextIds = this.store.state.currentAllIds.slice(this.store.state.currentOffset, this.store.state.currentOffset + 25);
             
-            this.currentOffset += 25;
-            this.ui.renderCourses(nextResults, true); 
+            // Use the active abort signal to kill hydration if a new search fires
+            const signal = this.currentSearchController?.signal;
+            const nextRows = await this.db.hydrateCourses(nextIds, this.store.filters.sortBy, signal);
             
-            if (this.isExpanded) this.ui.toggleAll(true);
+            const nextResults = CourseService.shapeDataForUI(nextRows);
+            this.store.state.currentOffset += 25;
             
+            this.ui.renderCourses(nextResults, this.store.state.totalMatches, true); 
+            
+            if (this.store.state.isExpanded) this.ui.toggleAll(true);
             this.setupObserver();
         } catch (error) {
-            console.error("Hydration failed:", error);
+            if (error.name !== 'AbortError') console.error("Hydration failed:", error);
         } finally {
-            this.isLoadingMore = false;
+            this.store.state.isLoadingMore = false;
             this.ui.showLoadingMore(false);
         }
     }

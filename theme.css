@@ -1,60 +1,60 @@
 :root {
     /* Backgrounds */
-    --bg-canvas: #f1f5f9;      /* slate-100 (Lightened for better contrast) */
-    --bg-surface: #ffffff;     /* white */
-    --bg-surface-hover: #f8fafc; /* slate-50 */
-    --bg-surface-alt: #e2e8f0; /* slate-200 (Darkened slightly for toggle tracks) */
+    --bg-canvas       : #f1f5f9;     /* slate-100 (Lightened for better contrast) */
+    --bg-surface      : #ffffff;     /* white */
+    --bg-surface-hover: #f8fafc;     /* slate-50 */
+    --bg-surface-alt  : #e2e8f0;     /* slate-200 (Darkened slightly for toggle tracks) */
     
     /* Typography */
     --font-sans: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
     --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
     
-    --text-main: #1e293b;      /* slate-800 */
-    --text-muted: #64748b;     /* slate-500 */
-    --text-inverse: #ffffff;   /* Pure white */
+    --text-main   : #1e293b;     /* slate-800 */
+    --text-muted  : #64748b;     /* slate-500 */
+    --text-inverse: #ffffff;     /* Pure white */
     
     /* Borders */
-    --border-color: #cbd5e1;   /* slate-300 */
-    --border-focus: #7e22ce;   /* Focus ring color */
+    --border-color: #cbd5e1;     /* slate-300 */
+    --border-focus: #7e22ce;     /* Focus ring color */
     
     /* Accent (UW Purple) */
-    --accent-main: #7e22ce;    /* purple-700 */
-    --accent-hover: #6b21a8;   /* purple-800 */
-    --accent-bg: #faf5ff;      /* purple-50 */
-    --accent-text: #7e22ce;    /* purple-700 */
+    --accent-main : #7e22ce;     /* purple-700 */
+    --accent-hover: #6b21a8;     /* purple-800 */
+    --accent-bg   : #faf5ff;     /* purple-50 */
+    --accent-text : #7e22ce;     /* purple-700 */
 
     /* Statuses */
-    --status-wait: #f59e0b;    /* amber-500 */
-    --status-ok: #059669;      /* emerald-600 */
-    --status-err: #dc2626;     /* red-600 */
+    --status-wait: #f59e0b;     /* amber-500 */
+    --status-ok  : #059669;     /* emerald-600 */
+    --status-err : #dc2626;     /* red-600 */
 }
 
 .dark {
     /* Backgrounds */
-    --bg-canvas: #020617;      /* slate-950 (Deepest background) */
-    --bg-surface: #0f172a;     /* slate-900 (Main cards and sidebar) */
-    --bg-surface-alt: #1e293b; /* slate-800 (Inputs, Primary Sections - Lightened!) */
-    --bg-surface-hover: #334155; /* slate-700 (Hover states) */
+    --bg-canvas       : #020617;     /* slate-950 (Deepest background) */
+    --bg-surface      : #0f172a;     /* slate-900 (Main cards and sidebar) */
+    --bg-surface-alt  : #1e293b;     /* slate-800 (Inputs, Primary Sections - Lightened!) */
+    --bg-surface-hover: #334155;     /* slate-700 (Hover states) */
     
     /* Typography */
-    --text-main: #f8fafc;      /* slate-50 */
-    --text-muted: #94a3b8;     /* slate-400 */
-    --text-inverse: #ffffff;   /* Pure white */
+    --text-main   : #f8fafc;     /* slate-50 */
+    --text-muted  : #94a3b8;     /* slate-400 */
+    --text-inverse: #ffffff;     /* Pure white */
     
     /* Borders */
-    --border-color: #475569;   /* slate-600 */
-    --border-focus: #a855f7;   /* purple-500 */
+    --border-color: #475569;     /* slate-600 */
+    --border-focus: #a855f7;     /* purple-500 */
     
     /* Accent (Adapted for Dark Mode) */
-    --accent-main: #9333ea;    /* purple-600 */
-    --accent-hover: #a855f7;   /* purple-500 */
-    --accent-bg: #3b0764;      /* purple-950 */
-    --accent-text: #d8b4fe;    /* purple-300 */
+    --accent-main : #9333ea;     /* purple-600 */
+    --accent-hover: #a855f7;     /* purple-500 */
+    --accent-bg   : #3b0764;     /* purple-950 */
+    --accent-text : #d8b4fe;     /* purple-300 */
 
     /* Statuses */
-    --status-wait: #fbbf24;    /* amber-400 */
-    --status-ok: #34d399;      /* emerald-400 */
-    --status-err: #f87171;     /* red-400 */
+    --status-wait: #fbbf24;      /* amber-400 */
+    --status-ok  : #34d399;      /* emerald-400 */
+    --status-err : #f87171;      /* red-400 */
 }
 
 /* Base DOM Adjustments */
