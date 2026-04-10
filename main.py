@@ -14,7 +14,7 @@ if __name__ == "__main__":
         db_path="data/queue.db",
         # start=("AUT", 2021),
         # end=("AUT", 2021),
-        target_majors=["aa", "meche"], # Aeronautics and Mechanical Engineering
+        target_majors=["aa", "meche", "cse", "appmath"], # Aeronautics and Mechanical Engineering
         invalidate=False
     )
 
