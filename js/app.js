@@ -125,21 +125,22 @@ class App {
             });
         });
 
+        // Updated TBA buttons to match the day-mode toggle exactly
         const tbaBtns = document.querySelectorAll('.tba-btn');
         tbaBtns.forEach(btn => {
             btn.addEventListener('click', (e) => {
                 tbaBtns.forEach(b => {
-                    b.classList.remove('bg-indigo-100', 'shadow-inner', 'text-indigo-800', 'active');
+                    b.classList.remove('bg-white', 'shadow-sm', 'text-slate-700', 'active');
                     b.classList.add('text-slate-500');
                 });
                 const target = e.target;
                 target.classList.remove('text-slate-500');
-                target.classList.add('bg-indigo-100', 'shadow-inner', 'text-indigo-800', 'active');
+                target.classList.add('bg-white', 'shadow-sm', 'text-slate-700', 'active');
                 this.markSearchReady();
             });
         });
 
-        // NEW: Quarter Filtering Buttons (Color toggling)
+        // Quarter Filtering Buttons (Color toggling)
         document.querySelectorAll('.quarter-btn').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 const t = e.target;
@@ -161,7 +162,7 @@ class App {
             });
         });
 
-        // Other generic filter buttons/chips
+        // Other generic filter buttons/chips (Standardized to purple-700)
         document.querySelectorAll('.filter-btn, .filter-chip').forEach(btn => {
             if (btn.classList.contains('quarter-btn')) return; // handled above
 
@@ -247,14 +248,14 @@ class App {
             }
         });
 
-        // 6. TBA Reset
+        // 6. TBA Reset (Standardized style)
         const tbaBtns = document.querySelectorAll('.tba-btn');
         tbaBtns.forEach(btn => {
             if (btn.dataset.tba === 'include') {
-                btn.classList.add('bg-indigo-100', 'shadow-inner', 'text-indigo-800', 'active');
+                btn.classList.add('bg-white', 'shadow-sm', 'text-slate-700', 'active');
                 btn.classList.remove('text-slate-500');
             } else {
-                btn.classList.remove('bg-indigo-100', 'shadow-inner', 'text-indigo-800', 'active');
+                btn.classList.remove('bg-white', 'shadow-sm', 'text-slate-700', 'active');
                 btn.classList.add('text-slate-500');
             }
         });
@@ -266,9 +267,9 @@ class App {
         if (this.observer) this.observer.disconnect();
 
         this.ui.container.innerHTML = `
-            <div class="text-center py-20 bg-white rounded-lg border border-slate-200">
-                <i data-lucide="info" class="w-12 h-12 text-slate-300 mx-auto mb-3"></i>
-                <h3 class="text-lg font-medium text-slate-900">Filters Reset</h3>
+            <div class="text-center py-20">
+                <i data-lucide="info" class="w-12 h-12 text-slate-400 mx-auto mb-3"></i>
+                <h3 class="text-lg font-medium text-slate-700">Filters Reset</h3>
                 <p class="text-slate-500 text-sm mt-1">Enter a search term or select filters to see results.</p>
             </div>`;
         if (window.lucide) lucide.createIcons();
@@ -278,7 +279,7 @@ class App {
         if (this.searchBtn) {
             this.searchBtn.disabled = true;
             this.searchBtn.classList.add('bg-slate-300', 'text-slate-500', 'cursor-not-allowed');
-            this.searchBtn.classList.remove('bg-purple-600', 'text-white', 'hover:bg-purple-700', 'shadow-md');
+            this.searchBtn.classList.remove('bg-purple-700', 'text-white', 'hover:bg-purple-800', 'shadow-md');
         }
     }
 
@@ -314,11 +315,12 @@ class App {
             const clearBtn = document.getElementById('clear-majors');
             const container = clearBtn.parentElement.parentElement.querySelector('.max-h-36');
             
-            let html = `<label class="flex items-center gap-2 cursor-pointer hover:bg-slate-200 p-1 rounded transition-colors"><input type="checkbox" class="accent-purple-600 major-checkbox" value="ALL" checked> All Departments</label>`;
+            // Standardized purple accent color
+            let html = `<label class="flex items-center gap-2 cursor-pointer hover:bg-slate-200 p-1 rounded transition-colors"><input type="checkbox" class="accent-purple-700 major-checkbox" value="ALL" checked> All Departments</label>`;
             
             majors.forEach(m => {
                 const displayName = m.name ? `${m.prefix} - ${m.name}` : m.prefix;
-                html += `<label class="flex items-center gap-2 cursor-pointer hover:bg-slate-200 p-1 rounded transition-colors"><input type="checkbox" class="accent-purple-600 major-checkbox" value="${m.prefix}"> ${displayName}</label>`;
+                html += `<label class="flex items-center gap-2 cursor-pointer hover:bg-slate-200 p-1 rounded transition-colors"><input type="checkbox" class="accent-purple-700 major-checkbox" value="${m.prefix}"> ${displayName}</label>`;
             });
 
             container.innerHTML = html;
@@ -410,7 +412,8 @@ class App {
         if (!this.searchBtn) return;
         this.searchBtn.disabled = false;
         this.searchBtn.classList.remove('bg-slate-300', 'text-slate-500', 'cursor-not-allowed');
-        this.searchBtn.classList.add('bg-purple-600', 'text-white', 'hover:bg-purple-700', 'shadow-md');
+        // Standardized on purple-700
+        this.searchBtn.classList.add('bg-purple-700', 'text-white', 'hover:bg-purple-800', 'shadow-md');
     }
 
     async init() {
@@ -438,7 +441,7 @@ class App {
         if (this.searchBtn) {
             this.searchBtn.disabled = true;
             this.searchBtn.classList.add('bg-slate-300', 'text-slate-500', 'cursor-not-allowed');
-            this.searchBtn.classList.remove('bg-purple-600', 'text-white', 'hover:bg-purple-700', 'shadow-md');
+            this.searchBtn.classList.remove('bg-purple-700', 'text-white', 'hover:bg-purple-800', 'shadow-md');
         }
         
         this.ui.showLoading();

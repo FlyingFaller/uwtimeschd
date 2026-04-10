@@ -24,7 +24,7 @@ export class UIManager {
     showLoading() {
         this.container.innerHTML = `
             <div class="text-center py-20">
-                <i data-lucide="loader-2" class="w-12 h-12 text-purple-600 animate-spin mx-auto mb-3"></i>
+                <i data-lucide="loader-2" class="w-12 h-12 text-purple-700 animate-spin mx-auto mb-3"></i>
                 <h3 class="text-lg font-medium text-slate-900">Querying Schedule...</h3>
             </div>`;
         lucide.createIcons();
@@ -33,8 +33,9 @@ export class UIManager {
     showLoadingMore(show) {
         const indicator = document.getElementById('loading-more-indicator');
         if (!indicator && show && this.container) {
+            // Removed the margin-top (mt-4) to tighten spacing
             this.container.insertAdjacentHTML('beforeend', `
-                <div id="loading-more-indicator" class="text-center py-6 text-slate-500 font-medium bg-slate-50 rounded-lg mt-4 border border-slate-200">
+                <div id="loading-more-indicator" class="text-center py-4 text-slate-500 font-medium">
                     <i data-lucide="loader" class="w-5 h-5 inline-block animate-spin mr-2"></i> Fetching more courses...
                 </div>
             `);
@@ -57,9 +58,7 @@ export class UIManager {
         return "bg-slate-100 text-slate-800 border-slate-300";
     }
 
-    // Exact render function preserved, updated with append flag and sentinel
     renderCourses(courses, append = false) {
-        // Update Total Results Counter (Total FTS matches, not just the hydrated slice)
         if (this.resultCount && courses.totalMatches !== undefined) {
             this.resultCount.innerText = courses.totalMatches;
         }
@@ -83,16 +82,17 @@ export class UIManager {
                 let typeColor = sec.type === 'LC' ? 'bg-blue-100 text-blue-800' : (sec.type === 'QZ' ? 'bg-orange-100 text-orange-800' : (sec.type === 'IS' ? 'bg-purple-100 text-purple-800' : 'bg-slate-100 text-slate-800'));
                 let typeTooltip = this.typeTitles[sec.type] || sec.type;
                 
-                let rowBgClass = sec.isPrimary ? 'bg-slate-100 hover:bg-slate-200' : 'bg-white hover:bg-slate-50';
-                let idTextClass = sec.isPrimary ? 'text-slate-600' : 'text-slate-400';
+                // Primary section background lightened to slate-100 to sit better visually
+                let rowBgClass = sec.isPrimary ? 'bg-slate-100 hover:bg-slate-200/80 border-slate-200' : 'bg-white hover:bg-slate-50 border-slate-100';
+                let idTextClass = sec.isPrimary ? 'text-slate-700' : 'text-slate-400';
                 
                 let daysHtml = `<div class="space-y-1">` + sec.meetings.map(m => `<div>${m.days}</div>`).join('') + `</div>`;
                 let timeHtml = `<div class="space-y-1">` + sec.meetings.map(m => `<div>${m.time || '-'}</div>`).join('') + `</div>`;
                 let bldgHtml = `<div class="space-y-1">` + sec.meetings.map(m => `<div>${m.bldg}</div>`).join('') + `</div>`;
-                let instHtml = `<div class="space-y-1">` + sec.meetings.map(m => `<div class="truncate max-w-[110px]" title="${m.instructor}">${m.instructor}</div>`).join('') + `</div>`;
+                let instHtml = `<div class="space-y-1">` + sec.meetings.map(m => `<div class="truncate max-w-[130px]" title="${m.instructor}">${m.instructor}</div>`).join('') + `</div>`;
 
                 let detailsHtml = '';
-                const detailBaseClass = "inline-block px-1.5 py-0.5 mr-1 mb-1 border rounded-[4px] text-[9px] font-bold uppercase tracking-wider cursor-help";
+                const detailBaseClass = "inline-block px-1.5 py-0.5 mr-1 mb-1 border rounded text-[9px] font-bold uppercase tracking-wider cursor-help";
                 
                 if (sec.crnc) detailsHtml += `<span class="${detailBaseClass} bg-slate-100 text-slate-600 border-slate-300" title="Credit / No Credit Only">CR/NC</span>`;
                 if (sec.fee) detailsHtml += `<span class="${detailBaseClass} bg-green-50 text-green-700 border-green-200" title="Extra Course Fee">Fee: $${sec.fee}</span>`;
@@ -121,7 +121,7 @@ export class UIManager {
                 }
 
                 sectionRowsHtml += `
-                    <tr class="border-b border-slate-100 ${rowBgClass} transition-colors">
+                    <tr class="border-b ${rowBgClass} transition-colors">
                         <td class="py-2.5 px-3 font-mono text-xs text-slate-600 whitespace-nowrap align-middle">
                             ${sec.sln} 
                             <span class="text-[10px] font-extrabold ${idTextClass} mx-1">${sec.id}</span>
@@ -136,7 +136,7 @@ export class UIManager {
                         <td class="py-2.5 px-2 text-[11px] font-medium text-slate-700 whitespace-nowrap align-middle">${timeHtml}</td>
                         <td class="py-2.5 px-2 text-[11px] font-medium text-slate-700 whitespace-nowrap align-middle">${bldgHtml}</td>
                         <td class="py-2.5 px-2 text-[11px] font-medium text-slate-800 align-middle">${instHtml}</td>
-                        <td class="py-2.5 px-2 text-[11px] font-medium text-slate-600 align-middle">${sec.enrl}/${sec.limit}</td>
+                        <td class="py-2.5 px-2 text-[11px] font-medium text-slate-600 align-middle">${sec.enrl} / ${sec.limit}</td>
                         <td class="py-2 px-2 max-w-[200px] align-middle">${detailsHtml}</td>
                     </tr>
                 `;
@@ -144,10 +144,10 @@ export class UIManager {
                 if (sec.notes) {
                     sectionRowsHtml += `
                         <tr>
-                            <td colspan="9" class="bg-amber-50/40 border-b border-amber-100/50 p-0">
+                            <td colspan="9" class="bg-amber-50/40 border-b border-amber-100 p-0">
                                 <div class="px-3 py-1.5 text-[11px] text-amber-900 font-medium flex items-start gap-2">
                                     <i data-lucide="info" class="w-3.5 h-3.5 mt-0.5 opacity-60 shrink-0"></i>
-                                    <span class="font-mono">${sec.notes}</span>
+                                    <span class="font-mono leading-relaxed">${sec.notes}</span>
                                 </div>
                             </td>
                         </tr>
@@ -161,24 +161,25 @@ export class UIManager {
                 <details class="course-card group bg-white border border-slate-300 rounded-lg shadow-sm overflow-hidden mb-4">
                     <summary class="cursor-pointer p-4 border-b border-slate-200 bg-slate-50/50 hover:bg-slate-100 flex flex-col md:flex-row md:items-center justify-between gap-4 transition-colors">
                         <div class="flex items-center gap-3">
-                            <h2 class="text-xl font-extrabold text-slate-900 tracking-tight flex items-center gap-2">
+                            <h2 class="text-lg font-extrabold text-slate-900 tracking-tight flex items-center gap-2">
                                 ${course.prefix} ${course.number}
                             </h2>
-                            <h3 class="text-base text-slate-600 font-medium">${course.title}</h3>
+                            <h3 class="text-[15px] text-slate-600 font-medium">${course.title}</h3>
                         </div>
                         <div class="flex items-center justify-between md:justify-end w-full md:w-auto gap-4 shrink-0">
-                            <span class="px-2 py-0.5 rounded border text-[10px] font-bold uppercase tracking-wider ${qColor}">${course.quarter}</span>
-                            <div class="text-slate-400 group-open:rotate-180 transition-transform duration-200 shrink-0">
-                                <i data-lucide="chevron-down" class="w-6 h-6"></i>
+                            <!-- Bumped text size to text-xs and increased padding -->
+                            <span class="px-3 py-1 rounded-md border text-xs font-bold uppercase tracking-wider shadow-sm ${qColor}">${course.quarter}</span>
+                            <div class="text-slate-400 group-open:rotate-180 transition-transform duration-200 shrink-0 bg-white border border-slate-200 rounded p-1 shadow-sm group-hover:bg-slate-50">
+                                <i data-lucide="chevron-down" class="w-4 h-4"></i>
                             </div>
                         </div>
                     </summary>
 
                     <div class="bg-white">
                         ${course.notes ? `
-                            <div class="bg-blue-50/40 border-b border-blue-100 px-4 py-3 text-[11px] text-blue-900 font-mono font-medium flex gap-2 items-start">
-                                <i data-lucide="alert-circle" class="w-4 h-4 opacity-70 shrink-0 font-sans mt-0.5"></i>
-                                <span>${course.notes}</span>
+                            <div class="bg-blue-50/40 border-b border-blue-100 px-4 py-2 text-[11px] text-blue-900 font-mono font-medium flex gap-2 items-start">
+                                <i data-lucide="alert-circle" class="w-3.5 h-3.5 opacity-70 shrink-0 font-sans mt-0.5"></i>
+                                <span class="leading-relaxed">${course.notes}</span>
                             </div>
                         ` : ''}
 
@@ -207,7 +208,6 @@ export class UIManager {
             `;
         });
 
-        // DOM Manipulation: Append or Overwrite
         if (append) {
             const oldSentinel = document.getElementById('scroll-sentinel');
             if (oldSentinel) oldSentinel.remove();
@@ -217,8 +217,8 @@ export class UIManager {
             this.container.innerHTML = html;
         }
 
-        // Add intersection observer target for next page
-        this.container.insertAdjacentHTML('beforeend', '<div id="scroll-sentinel" class="h-12 w-full"></div>');
+        // Reduced scroll-sentinel height from h-12 to h-2 to tighten spacing
+        this.container.insertAdjacentHTML('beforeend', '<div id="scroll-sentinel" class="h-2 w-full flex items-center justify-center opacity-0"></div>');
         lucide.createIcons();
     }
 }

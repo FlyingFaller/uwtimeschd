@@ -3,14 +3,15 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>UW Time Schedule - Command Center</title>
+    <title>UW Time Schedule Search</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/lucide@latest/dist/umd/lucide.min.js"></script>
     <style>
         ::-webkit-scrollbar { width: 6px; height: 6px; }
         ::-webkit-scrollbar-track { background: transparent; }
-        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
         ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+        
         th { position: sticky; top: 0; background-color: #f8fafc; z-index: 10; }
         details > summary { list-style: none; }
         details > summary::-webkit-details-marker { display: none; }
@@ -23,41 +24,94 @@
     <!-- LEFT SIDEBAR: CONTROL PANEL -->
     <aside class="w-80 bg-white border-r border-slate-300 flex flex-col h-full shadow-lg z-20 shrink-0">
         <!-- Logo / Header -->
-        <div class="p-5 border-b border-slate-200 bg-slate-50 flex items-center gap-3">
-            <div class="bg-purple-700 text-white p-2 rounded flex items-center justify-center">
+        <div class="p-4 border-b border-slate-200 bg-slate-50 flex items-center gap-3 shrink-0">
+            <div class="bg-purple-700 text-white p-2 rounded flex items-center justify-center shadow-sm">
                 <i data-lucide="library" class="w-5 h-5"></i>
             </div>
             <div>
-                <h1 class="text-sm font-bold tracking-tight text-slate-900 uppercase">UW Time Schedule</h1>
+                <h1 class="text-sm font-extrabold tracking-tight text-slate-900 uppercase">UW Time Schedule</h1>
                 <p id="db-status" class="text-[11px] text-amber-500 font-bold uppercase tracking-wider animate-pulse">Connecting to DB...</p>
             </div>
         </div>
 
         <!-- Filters Scroll Area -->
-        <div class="flex-1 overflow-y-auto p-5 space-y-6">
+        <div class="flex-1 overflow-y-auto p-5 space-y-4">
 
-            <!-- Reset All -->
-            <div class="flex items-center justify-between mb-4">
-                <h2 class="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest mb-3">Filters</h2>
-                <button id="reset-filters-btn" class="text-[10px] font-bold text-slate-400 hover:text-purple-600 flex items-center gap-1 transition-colors uppercase tracking-wider group">
-                    <i data-lucide="rotate-ccw" class="w-3 h-3 group-hover:rotate-[-45deg] transition-transform"></i>
+            <!-- Global Reset -->
+            <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+                <h2 class="text-base font-bold text-slate-700 tracking-wide">Filters</h2>
+                <button id="reset-filters-btn" class="text-xs font-bold text-slate-400 hover:text-purple-700 flex items-center gap-1 transition-colors uppercase tracking-wider group">
+                    <i data-lucide="rotate-ccw" class="w-3.5 h-3.5 group-hover:rotate-[-45deg] transition-transform"></i>
                     Reset All
                 </button>
             </div>
 
-            <!-- Category: Department & Course -->
+            <!-- CATEGORY 1: Term & Availability -->
             <div>
-                <h2 class="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest mb-3">Department & Course</h2>
+                <h2 class="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                    <i data-lucide="calendar-days" class="w-4 h-4"></i> Term & Availability
+                </h2>
+                
+                <div class="space-y-4">
+                    <!-- Term Range -->
+                    <div>
+                        <label class="text-xs font-semibold text-slate-700 mb-1.5 block">Academic Term Range</label>
+                        <div class="flex flex-col gap-2">
+                            <div class="flex items-center gap-2">
+                                <span class="text-xs font-medium text-slate-500 w-8">From</span>
+                                <select id="start-quarter" class="text-xs border border-slate-300 rounded p-1.5 flex-1 bg-slate-50 outline-none focus:border-purple-700 focus:bg-white focus:ring-1 focus:ring-purple-700 text-slate-700 cursor-pointer transition-colors">
+                                    <option value="">Any Quarter</option>
+                                    <option value="WIN">WIN</option>
+                                    <option value="SPR">SPR</option>
+                                    <option value="SUM">SUM</option>
+                                    <option value="AUT">AUT</option>
+                                </select>
+                                <input type="number" id="start-year" placeholder="Year" class="text-xs border border-slate-300 rounded p-1.5 w-[72px] outline-none focus:border-purple-700 focus:bg-white focus:ring-1 focus:ring-purple-700 bg-slate-50 text-slate-700 transition-colors" min="2003" max="2050">
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <span class="text-xs font-medium text-slate-500 w-8">To</span>
+                                <select id="end-quarter" class="text-xs border border-slate-300 rounded p-1.5 flex-1 bg-slate-50 outline-none focus:border-purple-700 focus:bg-white focus:ring-1 focus:ring-purple-700 text-slate-700 cursor-pointer transition-colors">
+                                    <option value="">Any Quarter</option>
+                                    <option value="WIN">WIN</option>
+                                    <option value="SPR">SPR</option>
+                                    <option value="SUM">SUM</option>
+                                    <option value="AUT">AUT</option>
+                                </select>
+                                <input type="number" id="end-year" placeholder="Year" class="text-xs border border-slate-300 rounded p-1.5 w-[72px] outline-none focus:border-purple-700 focus:bg-white focus:ring-1 focus:ring-purple-700 bg-slate-50 text-slate-700 transition-colors" min="2003" max="2050">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Offered In Buttons -->
+                    <div>
+                        <label class="text-xs font-semibold text-slate-700 mb-1.5 block">Offered In</label>
+                        <div class="flex gap-2">
+                            <button class="quarter-btn flex-1 py-1.5 border border-slate-300 bg-white text-slate-600 hover:bg-slate-50 text-[11px] font-bold rounded transition-colors" data-quarter="WIN">WIN</button>
+                            <button class="quarter-btn flex-1 py-1.5 border border-slate-300 bg-white text-slate-600 hover:bg-slate-50 text-[11px] font-bold rounded transition-colors" data-quarter="SPR">SPR</button>
+                            <button class="quarter-btn flex-1 py-1.5 border border-slate-300 bg-white text-slate-600 hover:bg-slate-50 text-[11px] font-bold rounded transition-colors" data-quarter="SUM">SUM</button>
+                            <button class="quarter-btn flex-1 py-1.5 border border-slate-300 bg-white text-slate-600 hover:bg-slate-50 text-[11px] font-bold rounded transition-colors" data-quarter="AUT">AUT</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <hr class="border-slate-200">
+
+            <!-- CATEGORY 2: Course Specifics -->
+            <div>
+                <h2 class="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                    <i data-lucide="book-open" class="w-4 h-4"></i> Course Specifics
+                </h2>
                 <div class="space-y-4">
                     
                     <!-- Searchable Majors List -->
                     <div>
-                        <div class="flex justify-between items-end mb-1">
+                        <div class="flex justify-between items-center mb-1.5">
                             <label class="text-xs font-semibold text-slate-700">Majors / Departments</label>
-                            <button id="clear-majors" class="text-[10px] text-purple-600 hover:underline">Clear</button>
+                            <button id="clear-majors" class="text-[11px] font-bold text-purple-700 hover:text-purple-800 transition-colors">Clear</button>
                         </div>
                         <div class="relative mb-2">
-                            <input type="text" placeholder="Filter majors..." class="w-full text-xs border border-slate-300 rounded p-1.5 pl-7 focus:ring-2 focus:ring-purple-500 outline-none">
+                            <input type="text" placeholder="Filter majors..." class="w-full text-xs border border-slate-300 rounded p-1.5 pl-7 focus:ring-1 focus:ring-purple-700 outline-none bg-slate-50 focus:bg-white transition-colors">
                             <i data-lucide="search" class="w-3.5 h-3.5 text-slate-400 absolute left-2 top-2"></i>
                         </div>
                         <div class="max-h-36 overflow-y-auto space-y-1 text-xs text-slate-700 border border-slate-200 p-1.5 rounded bg-slate-50 shadow-inner">
@@ -67,72 +121,30 @@
                         </div>
                     </div>
 
-                    <!-- Starting and Ending Year and Quarter-->
-                    <div class="mb-5">
-                        <h3 class="text-xs font-semibold text-slate-700 mb-2">Term Range</h3>
-                        <div class="flex flex-col gap-2">
-                            <!-- Start Bound -->
-                            <div class="flex items-center gap-2">
-                                <span class="text-xs font-medium text-slate-500 w-8">From</span>
-                                <select id="start-quarter" class="text-xs border border-slate-300 rounded p-1.5 flex-1 bg-white outline-none focus:border-purple-500 text-slate-700 cursor-pointer">
-                                    <option value="">ANY</option>
-                                    <option value="WIN">WIN</option>
-                                    <option value="SPR">SPR</option>
-                                    <option value="SUM">SUM</option>
-                                    <option value="AUT">AUT</option>
-                                </select>
-                                <input type="number" id="start-year" placeholder="Year" class="text-xs border border-slate-300 rounded p-1.5 w-[72px] outline-none focus:border-purple-500 text-slate-700" min="2003" max="2050">
-                            </div>
-                            <!-- End Bound -->
-                            <div class="flex items-center gap-2">
-                                <span class="text-xs font-medium text-slate-500 w-8">To</span>
-                                <select id="end-quarter" class="text-xs border border-slate-300 rounded p-1.5 flex-1 bg-white outline-none focus:border-purple-500 text-slate-700 cursor-pointer">
-                                    <option value="">ANY</option>
-                                    <option value="WIN">WIN</option>
-                                    <option value="SPR">SPR</option>
-                                    <option value="SUM">SUM</option>
-                                    <option value="AUT">AUT</option>
-                                </select>
-                                <input type="number" id="end-year" placeholder="Year" class="text-xs border border-slate-300 rounded p-1.5 w-[72px] outline-none focus:border-purple-500 text-slate-700" min="2003" max="2050">
-                            </div>
-                        </div>
-                    </div>
-                
-                    <!-- Quarter Select -->
-                    <div class="mb-5">
-                        <h3 class="text-xs font-semibold text-slate-700">Offered In</h3>
-                        <div class="flex gap-2">
-                            <button class="quarter-btn flex-1 py-1.5 border border-slate-300 bg-white text-slate-600 hover:bg-slate-50 text-[11px] font-bold rounded transition-colors" data-quarter="WIN">WIN</button>
-                            <button class="quarter-btn flex-1 py-1.5 border border-slate-300 bg-white text-slate-600 hover:bg-slate-50 text-[11px] font-bold rounded transition-colors" data-quarter="SPR">SPR</button>
-                            <button class="quarter-btn flex-1 py-1.5 border border-slate-300 bg-white text-slate-600 hover:bg-slate-50 text-[11px] font-bold rounded transition-colors" data-quarter="SUM">SUM</button>
-                            <button class="quarter-btn flex-1 py-1.5 border border-slate-300 bg-white text-slate-600 hover:bg-slate-50 text-[11px] font-bold rounded transition-colors" data-quarter="AUT">AUT</button>
-                        </div>
-                    </div>
-
                     <!-- Course Level -->
                     <div>
-                        <label class="text-xs font-semibold text-slate-700 mb-1 block">Course Level</label>
+                        <label class="text-xs font-semibold text-slate-700 mb-1.5 block">Course Level</label>
                         <div class="grid grid-cols-4 gap-1" id="level-container">
-                            <button data-level="100" class="level-btn py-1 text-[11px] border border-slate-300 rounded hover:bg-slate-50 font-medium filter-btn">100</button>
-                            <button data-level="200" class="level-btn py-1 text-[11px] border border-slate-300 rounded hover:bg-slate-50 font-medium filter-btn">200</button>
-                            <button data-level="300" class="level-btn py-1 text-[11px] border border-slate-300 rounded hover:bg-slate-50 font-medium filter-btn">300</button>
-                            <button data-level="400" class="level-btn py-1 text-[11px] border border-slate-300 rounded hover:bg-slate-50 font-medium filter-btn">400</button>
-                            <button data-level="500" class="level-btn py-1 text-[11px] border border-slate-300 rounded hover:bg-slate-50 font-medium filter-btn">500</button>
-                            <button data-level="600" class="level-btn py-1 text-[11px] border border-slate-300 rounded hover:bg-slate-50 font-medium filter-btn">600</button>
-                            <button data-level="700" class="level-btn py-1 text-[11px] border border-slate-300 rounded hover:bg-slate-50 font-medium filter-btn">700</button>
-                            <button data-level="800" class="level-btn py-1 text-[11px] border border-slate-300 rounded hover:bg-slate-50 font-medium filter-btn">800+</button>
+                            <button data-level="100" class="level-btn py-1 text-[11px] border border-slate-300 rounded hover:bg-slate-50 font-medium filter-btn bg-white text-slate-600 transition-colors">100</button>
+                            <button data-level="200" class="level-btn py-1 text-[11px] border border-slate-300 rounded hover:bg-slate-50 font-medium filter-btn bg-white text-slate-600 transition-colors">200</button>
+                            <button data-level="300" class="level-btn py-1 text-[11px] border border-slate-300 rounded hover:bg-slate-50 font-medium filter-btn bg-white text-slate-600 transition-colors">300</button>
+                            <button data-level="400" class="level-btn py-1 text-[11px] border border-slate-300 rounded hover:bg-slate-50 font-medium filter-btn bg-white text-slate-600 transition-colors">400</button>
+                            <button data-level="500" class="level-btn py-1 text-[11px] border border-slate-300 rounded hover:bg-slate-50 font-medium filter-btn bg-white text-slate-600 transition-colors">500</button>
+                            <button data-level="600" class="level-btn py-1 text-[11px] border border-slate-300 rounded hover:bg-slate-50 font-medium filter-btn bg-white text-slate-600 transition-colors">600</button>
+                            <button data-level="700" class="level-btn py-1 text-[11px] border border-slate-300 rounded hover:bg-slate-50 font-medium filter-btn bg-white text-slate-600 transition-colors">700</button>
+                            <button data-level="800" class="level-btn py-1 text-[11px] border border-slate-300 rounded hover:bg-slate-50 font-medium filter-btn bg-white text-slate-600 transition-colors">800+</button>
                         </div>
                     </div>
 
                     <!-- Credits -->
                     <div class="flex gap-2">
                         <div class="flex-1">
-                            <label class="text-[10px] font-semibold text-slate-500 uppercase">Min Credits</label>
-                            <input type="number" id="min-credits" placeholder="0" class="w-full text-xs border border-slate-300 rounded p-1.5 outline-none focus:ring-1 focus:ring-purple-500">
+                            <label class="text-xs font-semibold text-slate-700 mb-1 block">Min Credits</label>
+                            <input type="number" id="min-credits" placeholder="0" class="w-full text-xs border border-slate-300 rounded p-1.5 outline-none bg-slate-50 focus:bg-white focus:ring-1 focus:ring-purple-700 transition-colors">
                         </div>
                         <div class="flex-1">
-                            <label class="text-[10px] font-semibold text-slate-500 uppercase">Max Credits</label>
-                            <input type="number" id="max-credits" placeholder="30" class="w-full text-xs border border-slate-300 rounded p-1.5 outline-none focus:ring-1 focus:ring-purple-500">
+                            <label class="text-xs font-semibold text-slate-700 mb-1 block">Max Credits</label>
+                            <input type="number" id="max-credits" placeholder="30" class="w-full text-xs border border-slate-300 rounded p-1.5 outline-none bg-slate-50 focus:bg-white focus:ring-1 focus:ring-purple-700 transition-colors">
                         </div>
                     </div>
                 </div>
@@ -140,58 +152,60 @@
 
             <hr class="border-slate-200">
 
-            <!-- Category: Schedule & Time -->
+            <!-- CATEGORY 3: Schedule & Time -->
             <div>
-                <h2 class="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest mb-3">Schedule & Time</h2>
+                <h2 class="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                    <i data-lucide="clock" class="w-4 h-4"></i> Schedule & Time
+                </h2>
                 
                 <div class="space-y-4">
-                    
+                    <!-- Days -->
+                    <div>
+                        <div class="flex justify-between items-center mb-1.5">
+                            <label class="text-xs font-semibold text-slate-700">Meeting Days</label>
+                            <div id="day-mode-toggle" class="flex bg-slate-100 rounded p-0.5 border border-slate-200 cursor-pointer">
+                                <button data-mode="include" class="mode-btn text-[11px] px-2 py-0.5 bg-white shadow-sm rounded-sm font-bold text-slate-700 active transition-all">Include</button>
+                                <button data-mode="exclude" class="mode-btn text-[11px] px-2 py-0.5 text-slate-500 font-medium hover:text-slate-700 transition-all">Exclude</button>
+                            </div>
+                        </div>
+                        <div class="flex gap-1" id="days-container">
+                            <button data-day="M" class="flex-1 py-1 text-xs border border-slate-300 rounded hover:bg-slate-50 font-medium filter-btn day-btn bg-white text-slate-600 transition-colors">M</button>
+                            <button data-day="T" class="flex-1 py-1 text-xs border border-slate-300 rounded hover:bg-slate-50 font-medium filter-btn day-btn bg-white text-slate-600 transition-colors">T</button>
+                            <button data-day="W" class="flex-1 py-1 text-xs border border-slate-300 rounded hover:bg-slate-50 font-medium filter-btn day-btn bg-white text-slate-600 transition-colors">W</button>
+                            <button data-day="Th" class="flex-1 py-1 text-xs border border-slate-300 rounded hover:bg-slate-50 font-medium filter-btn day-btn bg-white text-slate-600 transition-colors">Th</button>
+                            <button data-day="F" class="flex-1 py-1 text-xs border border-slate-300 rounded hover:bg-slate-50 font-medium filter-btn day-btn bg-white text-slate-600 transition-colors">F</button>
+                        </div>
+                        <p class="text-[11px] text-slate-500 mt-1.5 italic text-center" id="day-mode-desc">Must meet on ALL selected days</p>
+                    </div>
+
+                    <!-- Time Bounds -->
+                    <div class="flex gap-2">
+                        <div class="flex-1">
+                            <label class="text-xs font-semibold text-slate-700 mb-1 block">Starts After</label>
+                            <input type="time" id="start-time" class="w-full text-xs border border-slate-300 rounded p-1.5 outline-none bg-slate-50 focus:bg-white focus:ring-1 focus:ring-purple-700 transition-colors">
+                        </div>
+                        <div class="flex-1">
+                            <label class="text-xs font-semibold text-slate-700 mb-1 block">Ends Before</label>
+                            <input type="time" id="end-time" class="w-full text-xs border border-slate-300 rounded p-1.5 outline-none bg-slate-50 focus:bg-white focus:ring-1 focus:ring-purple-700 transition-colors">
+                        </div>
+                    </div>
+
                     <!-- Apply To Scope & TBA Controls -->
-                    <div class="bg-indigo-50 border border-indigo-100 p-2 rounded space-y-2">
+                    <div class="space-y-3 pt-1">
                         <div class="flex justify-between items-center">
-                            <label class="text-[10px] font-bold text-indigo-800 uppercase tracking-wide">Apply Limits To:</label>
-                            <select id="time-scope" class="text-[10px] border border-indigo-200 rounded p-1 outline-none bg-white font-bold text-indigo-700 shadow-sm cursor-pointer">
+                            <label class="text-xs font-semibold text-slate-700">Apply Limits To:</label>
+                            <select id="time-scope" class="text-xs border border-slate-300 rounded p-1 outline-none bg-white font-semibold text-slate-700 shadow-sm cursor-pointer focus:ring-1 focus:ring-purple-700">
                                 <option value="primary">Primary Sections</option>
                                 <option value="all">All Sections</option>
                             </select>
                         </div>
-                        <div class="flex justify-between items-center border-t border-indigo-100/50 pt-2">
-                            <label class="text-[10px] font-bold text-indigo-800 uppercase tracking-wide">TBA Meetings:</label>
-                            <div id="tba-toggle" class="flex bg-white rounded p-0.5 border border-indigo-200 cursor-pointer shadow-sm">
-                                <button data-tba="include" class="tba-btn text-[10px] px-2 py-0.5 bg-indigo-100 shadow-inner rounded font-bold text-indigo-800 active">Include</button>
-                                <button data-tba="exclude" class="tba-btn text-[10px] px-2 py-0.5 text-slate-500 font-medium hover:text-slate-700 transition-colors">Exclude</button>
+                        <div class="flex justify-between items-center">
+                            <label class="text-xs font-semibold text-slate-700">TBA Meetings:</label>
+                            <!-- Now matches Meeting Days HTML format exactly -->
+                            <div id="tba-toggle" class="flex bg-slate-100 rounded p-0.5 border border-slate-200 cursor-pointer">
+                                <button data-tba="include" class="tba-btn text-[11px] px-2 py-0.5 bg-white shadow-sm rounded-sm font-bold text-slate-700 active transition-all">Include</button>
+                                <button data-tba="exclude" class="tba-btn text-[11px] px-2 py-0.5 text-slate-500 font-medium hover:text-slate-700 transition-all">Exclude</button>
                             </div>
-                        </div>
-                    </div>
-
-                    <!-- Days -->
-                    <div>
-                        <div class="flex justify-between items-center mb-1">
-                            <label class="text-xs font-semibold text-slate-700">Meeting Days</label>
-                            <div id="day-mode-toggle" class="flex bg-slate-100 rounded p-0.5 border border-slate-200 cursor-pointer">
-                                <button data-mode="include" class="mode-btn text-[10px] px-2 py-0.5 bg-white shadow-sm rounded font-bold text-slate-700 active">Include</button>
-                                <button data-mode="exclude" class="mode-btn text-[10px] px-2 py-0.5 text-slate-500 font-medium hover:text-slate-700 transition-colors">Exclude</button>
-                            </div>
-                        </div>
-                        <div class="flex gap-1" id="days-container">
-                            <button data-day="M" class="flex-1 py-1 text-xs border border-slate-300 rounded hover:bg-slate-50 font-medium filter-btn day-btn">M</button>
-                            <button data-day="T" class="flex-1 py-1 text-xs border border-slate-300 rounded hover:bg-slate-50 font-medium filter-btn day-btn">T</button>
-                            <button data-day="W" class="flex-1 py-1 text-xs border border-slate-300 rounded hover:bg-slate-50 font-medium filter-btn day-btn">W</button>
-                            <button data-day="Th" class="flex-1 py-1 text-xs border border-slate-300 rounded hover:bg-slate-50 font-medium filter-btn day-btn">Th</button>
-                            <button data-day="F" class="flex-1 py-1 text-xs border border-slate-300 rounded hover:bg-slate-50 font-medium filter-btn day-btn">F</button>
-                        </div>
-                        <p class="text-[10px] text-slate-400 mt-1 italic text-center" id="day-mode-desc">Must meet on ALL selected days</p>
-                    </div>
-
-                    <!-- Time Bounds (Restored to System Default Time Inputs) -->
-                    <div class="flex gap-2">
-                        <div class="flex-1">
-                            <label class="text-[10px] font-semibold text-slate-500 uppercase">Starts After</label>
-                            <input type="time" id="start-time" class="w-full text-xs border border-slate-300 rounded p-1.5 outline-none focus:ring-1 focus:ring-purple-500">
-                        </div>
-                        <div class="flex-1">
-                            <label class="text-[10px] font-semibold text-slate-500 uppercase">Ends Before</label>
-                            <input type="time" id="end-time" class="w-full text-xs border border-slate-300 rounded p-1.5 outline-none focus:ring-1 focus:ring-purple-500">
                         </div>
                     </div>
                 </div>
@@ -199,47 +213,51 @@
 
             <hr class="border-slate-200">
 
-            <!-- Category: Section Types -->
+            <!-- CATEGORY 4: Section Types -->
             <div>
-                <h2 class="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest mb-3">Section Types</h2>
+                <h2 class="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                    <i data-lucide="layers" class="w-4 h-4"></i> Section Types
+                </h2>
                 <div class="grid grid-cols-2 gap-y-2 gap-x-1 text-xs text-slate-700" id="section-types-container">
-                    <label class="flex items-center gap-2 cursor-pointer hover:bg-slate-50 p-1 -ml-1 rounded"><input type="checkbox" data-type="LC" class="accent-purple-600 type-checkbox"> Lecture (LC)</label>
-                    <label class="flex items-center gap-2 cursor-pointer hover:bg-slate-50 p-1 -ml-1 rounded"><input type="checkbox" data-type="QZ" class="accent-purple-600 type-checkbox"> Quiz (QZ)</label>
-                    <label class="flex items-center gap-2 cursor-pointer hover:bg-slate-50 p-1 -ml-1 rounded"><input type="checkbox" data-type="LB" class="accent-purple-600 type-checkbox"> Lab (LB)</label>
-                    <label class="flex items-center gap-2 cursor-pointer hover:bg-slate-50 p-1 -ml-1 rounded"><input type="checkbox" data-type="SM" class="accent-purple-600 type-checkbox"> Seminar (SM)</label>
-                    <label class="flex items-center gap-2 cursor-pointer hover:bg-slate-50 p-1 -ml-1 rounded"><input type="checkbox" data-type="ST" class="accent-purple-600 type-checkbox"> Studio (ST)</label>
-                    <label class="flex items-center gap-2 cursor-pointer hover:bg-slate-50 p-1 -ml-1 rounded"><input type="checkbox" data-type="PR" class="accent-purple-600 type-checkbox"> Practicum (PR)</label>
-                    <label class="flex items-center gap-2 cursor-pointer hover:bg-slate-50 p-1 -ml-1 rounded"><input type="checkbox" data-type="CL" class="accent-purple-600 type-checkbox"> Clinic (CL)</label>
-                    <label class="flex items-center gap-2 cursor-pointer hover:bg-slate-50 p-1 -ml-1 rounded"><input type="checkbox" data-type="CK" class="accent-purple-600 type-checkbox"> Clerkship (CK)</label>
-                    <label class="flex items-center gap-2 cursor-pointer hover:bg-slate-50 p-1 -ml-1 rounded"><input type="checkbox" data-type="CO" class="accent-purple-600 type-checkbox"> Conference (CO)</label>
-                    <label class="flex items-center gap-2 cursor-pointer hover:bg-slate-50 p-1 -ml-1 rounded"><input type="checkbox" data-type="IS" class="accent-purple-600 type-checkbox"> Ind. Study (IS)</label>
+                    <label class="flex items-center gap-2 cursor-pointer hover:bg-slate-50 p-1 -ml-1 rounded transition-colors"><input type="checkbox" data-type="LC" class="accent-purple-700 type-checkbox"> Lecture (LC)</label>
+                    <label class="flex items-center gap-2 cursor-pointer hover:bg-slate-50 p-1 -ml-1 rounded transition-colors"><input type="checkbox" data-type="QZ" class="accent-purple-700 type-checkbox"> Quiz (QZ)</label>
+                    <label class="flex items-center gap-2 cursor-pointer hover:bg-slate-50 p-1 -ml-1 rounded transition-colors"><input type="checkbox" data-type="LB" class="accent-purple-700 type-checkbox"> Lab (LB)</label>
+                    <label class="flex items-center gap-2 cursor-pointer hover:bg-slate-50 p-1 -ml-1 rounded transition-colors"><input type="checkbox" data-type="SM" class="accent-purple-700 type-checkbox"> Seminar (SM)</label>
+                    <label class="flex items-center gap-2 cursor-pointer hover:bg-slate-50 p-1 -ml-1 rounded transition-colors"><input type="checkbox" data-type="ST" class="accent-purple-700 type-checkbox"> Studio (ST)</label>
+                    <label class="flex items-center gap-2 cursor-pointer hover:bg-slate-50 p-1 -ml-1 rounded transition-colors"><input type="checkbox" data-type="PR" class="accent-purple-700 type-checkbox"> Practicum (PR)</label>
+                    <label class="flex items-center gap-2 cursor-pointer hover:bg-slate-50 p-1 -ml-1 rounded transition-colors"><input type="checkbox" data-type="CL" class="accent-purple-700 type-checkbox"> Clinic (CL)</label>
+                    <label class="flex items-center gap-2 cursor-pointer hover:bg-slate-50 p-1 -ml-1 rounded transition-colors"><input type="checkbox" data-type="CK" class="accent-purple-700 type-checkbox"> Clerkship (CK)</label>
+                    <label class="flex items-center gap-2 cursor-pointer hover:bg-slate-50 p-1 -ml-1 rounded transition-colors"><input type="checkbox" data-type="CO" class="accent-purple-700 type-checkbox"> Conference (CO)</label>
+                    <label class="flex items-center gap-2 cursor-pointer hover:bg-slate-50 p-1 -ml-1 rounded transition-colors"><input type="checkbox" data-type="IS" class="accent-purple-700 type-checkbox"> Ind. Study (IS)</label>
                 </div>
             </div>
 
             <hr class="border-slate-200">
 
-            <!-- Category: Attributes & Grading -->
-            <div>
-                <h2 class="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest mb-3">Attributes & Grading</h2>
+            <!-- CATEGORY 5: Attributes & Grading -->
+            <div class="pb-6">
+                <h2 class="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                    <i data-lucide="tags" class="w-4 h-4"></i> Attributes & Grading
+                </h2>
                 
-                <div class="flex flex-wrap gap-2 mb-4" id="attributes-container">
-                    <button data-attr="Restricted" class="filter-chip px-2 py-1 text-[10px] uppercase tracking-wide border border-slate-300 rounded-full hover:bg-slate-100 font-bold text-slate-600 bg-white shadow-sm" title="Has Registration Restrictions">Restricted</button>
-                    <button data-attr="Add Code" class="filter-chip px-2 py-1 text-[10px] uppercase tracking-wide border border-slate-300 rounded-full hover:bg-slate-100 font-bold text-slate-600 bg-white shadow-sm" title="Add Code Required">Add Code (&gt;)</button>
-                    <button data-attr="CR/NC" class="filter-chip px-2 py-1 text-[10px] uppercase tracking-wide border border-slate-300 rounded-full hover:bg-slate-100 font-bold text-slate-600 bg-white shadow-sm" title="Credit / No Credit Only">CR/NC Only</button>
-                    <button data-attr="No Extra Fees" class="filter-chip px-2 py-1 text-[10px] uppercase tracking-wide border border-slate-300 rounded-full hover:bg-slate-100 font-bold text-slate-600 bg-white shadow-sm">No Extra Fees</button>
-                    <button data-attr="#" class="filter-chip px-2 py-1 text-[10px] uppercase tracking-wide border border-slate-300 rounded-full hover:bg-slate-100 font-bold text-slate-600 bg-white shadow-sm" title="Not eligible for Financial Aid">No FinAid (#)</button>
+                <div class="flex flex-wrap gap-2" id="attributes-container">
+                    <button data-attr="Restricted" class="filter-chip px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide border border-slate-300 rounded-full hover:bg-slate-100 text-slate-600 bg-white shadow-sm transition-colors" title="Has Registration Restrictions">Restricted</button>
+                    <button data-attr="Add Code" class="filter-chip px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide border border-slate-300 rounded-full hover:bg-slate-100 text-slate-600 bg-white shadow-sm transition-colors" title="Add Code Required">Add Code (&gt;)</button>
+                    <button data-attr="CR/NC" class="filter-chip px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide border border-slate-300 rounded-full hover:bg-slate-100 text-slate-600 bg-white shadow-sm transition-colors" title="Credit / No Credit Only">CR/NC Only</button>
+                    <button data-attr="No Extra Fees" class="filter-chip px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide border border-slate-300 rounded-full hover:bg-slate-100 text-slate-600 bg-white shadow-sm transition-colors">No Extra Fees</button>
+                    <button data-attr="#" class="filter-chip px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide border border-slate-300 rounded-full hover:bg-slate-100 text-slate-600 bg-white shadow-sm transition-colors" title="Not eligible for Financial Aid">No FinAid (#)</button>
 
-                    <button data-attr="W" class="filter-chip px-2 py-1 text-[10px] uppercase tracking-wide border border-slate-300 rounded-full hover:bg-slate-100 font-bold text-slate-600 bg-white shadow-sm">Writing (W)</button>
-                    <button data-attr="H" class="filter-chip px-2 py-1 text-[10px] uppercase tracking-wide border border-slate-300 rounded-full hover:bg-slate-100 font-bold text-slate-600 bg-white shadow-sm">Honors (H)</button>
-                    <button data-attr="J" class="filter-chip px-2 py-1 text-[10px] uppercase tracking-wide border border-slate-300 rounded-full hover:bg-slate-100 font-bold text-slate-600 bg-white shadow-sm">Jointly Offered (J)</button>
-                    <button data-attr="%" class="filter-chip px-2 py-1 text-[10px] uppercase tracking-wide border border-slate-300 rounded-full hover:bg-slate-100 font-bold text-slate-600 bg-white shadow-sm">New Course (%)</button>
+                    <button data-attr="W" class="filter-chip px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide border border-slate-300 rounded-full hover:bg-slate-100 text-slate-600 bg-white shadow-sm transition-colors">Writing (W)</button>
+                    <button data-attr="H" class="filter-chip px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide border border-slate-300 rounded-full hover:bg-slate-100 text-slate-600 bg-white shadow-sm transition-colors">Honors (H)</button>
+                    <button data-attr="J" class="filter-chip px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide border border-slate-300 rounded-full hover:bg-slate-100 text-slate-600 bg-white shadow-sm transition-colors">Jointly Offered (J)</button>
+                    <button data-attr="%" class="filter-chip px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide border border-slate-300 rounded-full hover:bg-slate-100 text-slate-600 bg-white shadow-sm transition-colors">New Course (%)</button>
 
-                    <button data-attr="O" class="filter-chip px-2 py-1 text-[10px] uppercase tracking-wide border border-slate-300 rounded-full hover:bg-slate-100 font-bold text-slate-600 bg-white shadow-sm">Online (O)</button>
-                    <button data-attr="A" class="filter-chip px-2 py-1 text-[10px] uppercase tracking-wide border border-slate-300 rounded-full hover:bg-slate-100 font-bold text-slate-600 bg-white shadow-sm">Async (A)</button>
-                    <button data-attr="B" class="filter-chip px-2 py-1 text-[10px] uppercase tracking-wide border border-slate-300 rounded-full hover:bg-slate-100 font-bold text-slate-600 bg-white shadow-sm">Hybrid (B)</button>
-                    <button data-attr="E" class="filter-chip px-2 py-1 text-[10px] uppercase tracking-wide border border-slate-300 rounded-full hover:bg-slate-100 font-bold text-slate-600 bg-white shadow-sm">Community (E)</button>
-                    <button data-attr="S" class="filter-chip px-2 py-1 text-[10px] uppercase tracking-wide border border-slate-300 rounded-full hover:bg-slate-100 font-bold text-slate-600 bg-white shadow-sm">Service (S)</button>
-                    <button data-attr="R" class="filter-chip px-2 py-1 text-[10px] uppercase tracking-wide border border-slate-300 rounded-full hover:bg-slate-100 font-bold text-slate-600 bg-white shadow-sm">Research (R)</button>
+                    <button data-attr="O" class="filter-chip px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide border border-slate-300 rounded-full hover:bg-slate-100 text-slate-600 bg-white shadow-sm transition-colors">Online (O)</button>
+                    <button data-attr="A" class="filter-chip px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide border border-slate-300 rounded-full hover:bg-slate-100 text-slate-600 bg-white shadow-sm transition-colors">Async (A)</button>
+                    <button data-attr="B" class="filter-chip px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide border border-slate-300 rounded-full hover:bg-slate-100 text-slate-600 bg-white shadow-sm transition-colors">Hybrid (B)</button>
+                    <button data-attr="E" class="filter-chip px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide border border-slate-300 rounded-full hover:bg-slate-100 text-slate-600 bg-white shadow-sm transition-colors">Community (E)</button>
+                    <button data-attr="S" class="filter-chip px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide border border-slate-300 rounded-full hover:bg-slate-100 text-slate-600 bg-white shadow-sm transition-colors">Service (S)</button>
+                    <button data-attr="R" class="filter-chip px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide border border-slate-300 rounded-full hover:bg-slate-100 text-slate-600 bg-white shadow-sm transition-colors">Research (R)</button>
                 </div>
             </div>
 
@@ -249,44 +267,49 @@
     <!-- MAIN CONTENT AREA -->
     <main class="flex-1 flex flex-col min-w-0 bg-slate-100">
         
-        <header class="bg-white border-b border-slate-300 shadow-sm z-10 shrink-0">
-            <div class="p-4 flex flex-col gap-3 max-w-6xl mx-auto w-full">
-                
-                <div class="flex gap-2 w-full">
-                    <div class="relative flex-1">
-                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                            <i data-lucide="search" class="text-slate-400 w-5 h-5"></i>
-                        </div>
-                        <input 
-                            type="text" 
-                            id="omni-search"
-                            disabled
-                            placeholder="Search prefix, course number, title, instructor, building, or SLN... (e.g. AA 210, Hurlen)" 
-                            class="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-300 rounded-lg shadow-inner text-sm focus:bg-white focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none transition-all disabled:opacity-50"
-                        >
+        <header class="bg-white border-b border-slate-300 shadow-sm z-10 shrink-0 flex flex-col">
+            
+            <!-- Tier 1: Search Bar -->
+            <div class="p-4 flex gap-3 max-w-6xl mx-auto w-full">
+                <div class="relative flex-1">
+                    <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
+                        <i data-lucide="search" class="text-slate-400 w-5 h-5"></i>
                     </div>
-                    <button id="search-btn" class="px-5 py-2.5 rounded-lg text-sm font-bold transition-all bg-slate-300 text-slate-500 cursor-not-allowed shrink-0" disabled>
-                        Search
-                    </button>
+                    <input 
+                        type="text" 
+                        id="omni-search"
+                        disabled
+                        placeholder="Search prefix, course number, title, instructor, building, or SLN... (e.g. AA 210, Hurlen)" 
+                        class="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-300 rounded-lg shadow-inner text-sm focus:bg-white focus:ring-2 focus:ring-purple-700 focus:border-purple-700 outline-none transition-all disabled:opacity-50"
+                    >
                 </div>
+                <button id="search-btn" class="px-6 py-2.5 rounded-lg text-sm font-bold transition-all bg-slate-300 text-slate-500 cursor-not-allowed shrink-0" disabled>
+                    Search
+                </button>
+            </div>
 
-                <div class="flex items-center justify-between">
-                    <div class="text-sm text-slate-500">
-                        <span id="result-count" class="font-extrabold text-slate-800">0</span> courses found
+            <!-- Tier 2: Utility Bar -->
+            <div class="bg-slate-50 border-t border-slate-200 px-4 py-2">
+                <div class="max-w-6xl mx-auto flex items-center justify-between w-full">
+                    
+                    <div class="flex items-center gap-4">
+                        <div class="text-sm text-slate-500">
+                            <span id="result-count" class="font-extrabold text-slate-800">0</span> courses found
+                        </div>
+                        <div class="h-4 w-px bg-slate-300"></div>
+                        <label for="load-all-toggle" class="flex items-center gap-1.5 cursor-pointer group">
+                            <input type="checkbox" id="load-all-toggle" class="cursor-pointer rounded border-slate-300 text-purple-700 focus:ring-purple-700 w-3.5 h-3.5">
+                            <span class="text-[11px] font-bold text-slate-600 group-hover:text-slate-900 select-none tracking-wider uppercase transition-colors">Load All Data</span>
+                        </label>
                     </div>
                     
                     <div class="flex items-center gap-3">
-                        <div class="flex items-center mr-2">
-                            <input type="checkbox" id="load-all-toggle" class="mr-1.5 cursor-pointer rounded border-slate-300 text-purple-600 focus:ring-purple-500">
-                            <label for="load-all-toggle" class="text-[11px] font-bold text-slate-600 cursor-pointer select-none tracking-wider uppercase">Load All Data</label>
-                        </div>
-
-                        <div class="flex gap-2 mr-2">
-                            <button id="expand-all-btn" class="text-[11px] font-bold text-purple-700 hover:bg-purple-50 border border-transparent hover:border-purple-200 px-2 py-1 rounded transition-colors">Expand All</button>
-                            <button id="collapse-all-btn" class="text-[11px] font-bold text-slate-500 hover:bg-slate-200 border border-transparent hover:border-slate-300 px-2 py-1 rounded transition-colors">Collapse All</button>
+                        <div class="flex gap-1.5 bg-slate-200/50 p-1 rounded border border-slate-200">
+                            <button id="expand-all-btn" class="text-[11px] font-bold text-purple-700 hover:bg-purple-100 px-2.5 py-1 rounded-sm transition-colors">Expand All</button>
+                            <button id="collapse-all-btn" class="text-[11px] font-bold text-slate-600 hover:bg-white hover:shadow-sm px-2.5 py-1 rounded-sm transition-colors">Collapse All</button>
                         </div>
                         
-                        <select id="sort-select" class="text-xs border border-slate-300 rounded p-1.5 outline-none bg-white font-bold text-slate-700 cursor-pointer shadow-sm">
+                        <select id="sort-select" class="text-xs border border-slate-300 rounded py-1 px-2 outline-none bg-white font-bold text-slate-700 cursor-pointer shadow-sm focus:border-purple-700 focus:ring-1 focus:ring-purple-700 transition-colors">
                             <option value="newest" selected>Sort: Newest First</option>
                             <option value="course">Sort: Course (A-Z)</option>
                             <option value="oldest">Sort: Oldest First</option>
