@@ -6,9 +6,12 @@ const createDbWorker = sqljsHttpVfs.createDbWorker || (sqljsHttpVfs.default && s
 
 export class DatabaseManager {
     constructor(dbPath = "data/config.json") { 
-        this.dbPath             = dbPath;
-        this.worker             = null;
-        this._spacelessMajorMap = null;
+        this.dbPath = dbPath;
+        this.worker = null;
+        this._spacelessMajorMap = null; 
+        
+        // DEBUG ONLY !
+        this.debugMode = true; 
     }
 
     async init() {
@@ -30,19 +33,19 @@ export class DatabaseManager {
                 const match = config.chunks[0].match(/^(.*)(\d{2})$/);
                 if (match) { urlPrefix = match[1]; suffixLength = match[2].length; }
             } else if (config.urlPrefix) {
-                urlPrefix    = config.urlPrefix;
+                urlPrefix = config.urlPrefix;
                 suffixLength = config.suffixLength || 2;
             }
 
             const workerConfig = {
                 from: "inline",
                 config: {
-                    serverMode         : config.serverMode || "chunked",
-                    requestChunkSize   : config.requestChunkSize || 4096,
+                    serverMode: config.serverMode || "chunked",
+                    requestChunkSize: config.requestChunkSize || 4096,
                     databaseLengthBytes: config.databaseLengthBytes,
-                    serverChunkSize    : config.serverChunkSize,
-                    urlPrefix          : new URL(urlPrefix, manifestBaseUrl).toString(),
-                    suffixLength       : suffixLength
+                    serverChunkSize: config.serverChunkSize,
+                    urlPrefix: new URL(urlPrefix, manifestBaseUrl).toString(),
+                    suffixLength: suffixLength
                 }
             };
 
@@ -54,9 +57,29 @@ export class DatabaseManager {
         }
     }
 
+    // --- DEBUG PROFILER ---
+    async _debugQueryPlan(sql, queryName = "Query") {
+        if (!this.debugMode || !this.worker) return;
+        try {
+            const explainSql = `EXPLAIN QUERY PLAN ${sql}`;
+            const planRows = await this.worker.db.query(explainSql);
+            
+            console.groupCollapsed(`%c [SQL Profiler] ${queryName}`, 'color: #7e22ce; font-weight: bold;');
+            console.log(`%cExecuting SQL:\n${sql}`, 'color: gray;');
+            console.table(planRows);
+            console.groupEnd();
+        } catch (e) {
+            console.warn("Could not explain query plan:", e);
+        }
+    }
+
     async getUniqueMajors() {
         if (!this.worker) throw new Error("Database not initialized");
-        const rows = await this.worker.db.query(`SELECT course_prefix, major_name FROM majors ORDER BY course_prefix ASC`);
+        const sql = `SELECT course_prefix, major_name FROM majors ORDER BY course_prefix ASC`;
+        
+        await this._debugQueryPlan(sql, "Fetch Unique Majors");
+        
+        const rows = await this.worker.db.query(sql);
         return rows.map(r => {
             const prefix = r.course_prefix.trim();
             const spaceless = prefix.replace(/\s+/g, '');
@@ -162,6 +185,9 @@ export class DatabaseManager {
         }
         sieveSql += ` ${orderClause}`;
 
+        // Log the Sieve Query Plan
+        await this._debugQueryPlan(sieveSql, "Discovery Sieve Query");
+
         const sieveRows = await this.worker.db.query(sieveSql);
         if (signal?.aborted) throw new DOMException("Aborted", "AbortError");
 
@@ -171,9 +197,9 @@ export class DatabaseManager {
         const hydratedRows = await this.hydrateCourses(pageIds, filters.sortBy, signal);
         
         return {
-            rows        : hydratedRows,
+            rows: hydratedRows,
             totalMatches: finalIds.length,
-            allIds      : finalIds
+            allIds: finalIds
         };
     }
 
@@ -203,6 +229,9 @@ export class DatabaseManager {
             WHERE c.course_id IN (${idList})
             ${orderClause}, s.section_id ASC, m.meeting_id ASC
         `;
+
+        // Log the Hydration Query Plan
+        await this._debugQueryPlan(hydrateSql, "Data Hydration Query");
 
         const hydrateRows = await this.worker.db.query(hydrateSql);
         if (signal?.aborted) throw new DOMException("Aborted", "AbortError");
