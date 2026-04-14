@@ -1,0 +1,20 @@
+{
+  "paths": {
+    "queue_db" : "data/queue.db",
+    "master_db": "data/schedules.db",
+    "chunk_dir": "data/"
+  },
+  "scraping": {
+    "fetch_delay"           : 0.5,
+    "chunk_size_mb"         : 50,
+    "task_limit"            : null,
+    "base_url"              : "https://www.washington.edu/students/timeschd/",
+    "max_consecutive_errors": 3,
+    "retry_http_codes"      : null
+  },
+  "targets": {
+    "start" : ["WIN", 2024],
+    "end"   : ["AUT", 2024],
+    "majors": ["aa", "meche", "cse", "appmath"]
+  }
+}
