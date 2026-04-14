@@ -8,7 +8,8 @@ import os
 CREATE_MAJORS_TABLE = """
     CREATE TABLE IF NOT EXISTS majors (
         course_prefix TEXT PRIMARY KEY,
-        major_name    TEXT
+        major_name    TEXT,
+        major_code    TEXT
     ) WITHOUT ROWID;
 """
 
@@ -61,6 +62,7 @@ CREATE_COURSES_TABLE = """
         course_prefix     TEXT,
         course_number     INTEGER,
         course_title      TEXT,
+        gen_ed_reqs       TEXT,
         has_prerequisites INTEGER,
         notes             TEXT
     ) WITHOUT ROWID;
@@ -189,9 +191,21 @@ def init_schedule_db(db_path: str = "data/schedules.db"):
         cursor.execute(CREATE_SECTIONS_TABLE)
         cursor.execute(CREATE_MEETINGS_TABLE)
         
-        # Sieve Indexes for fast Global Sorting
-        cursor.execute("CREATE INDEX IF NOT EXISTS idx_discovery_time ON filter_discovery(term_code DESC, course_prefix ASC, course_number ASC);")
+        # # Sieve Indexes for fast Global Sorting
+        # cursor.execute("CREATE INDEX IF NOT EXISTS idx_discovery_time ON filter_discovery(term_code DESC, course_prefix ASC, course_number ASC);")
+
+        # 1. Base Time Sort (Used on initial load or general filtering)
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_discovery_time ON filter_discovery(term_code DESC, course_prefix ASC, course_number ASC, course_id);")
         
+        # 2. Major Filter (Used when a specific department is checked)
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_discovery_major ON filter_discovery(course_prefix, term_code DESC, course_number ASC, course_id);")
+        
+        # 3. Level Filter (Used when a specific course level is clicked)
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_discovery_level ON filter_discovery(course_number, term_code DESC, course_prefix ASC, course_id);")
+        
+        # 4. Omni-Search FTS Intersection (Used when searching by text)
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_discovery_fts_id ON filter_discovery(course_id, term_code DESC, course_prefix ASC, course_number ASC);")
+
         # Hydration Indexes for fast Joins
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_sections_cid ON sections(course_id);")
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_meetings_sid ON meetings(section_id);")
@@ -205,12 +219,13 @@ def init_schedule_db(db_path: str = "data/schedules.db"):
 # ==========================================
 
 def insert_schedule_data(
-    quarter: str, 
-    year: int, 
-    college: str, 
-    major_name: str, 
-    courses: list[dict], 
-    db_path: str = "data/schedules.db"
+    quarter   : str,
+    year      : int,
+    college   : str,
+    major_name: str,
+    major_code: str,
+    courses   : list[dict],
+    db_path   : str = "data/schedules.db"
 ):
     """Ingests data into Sieve, FTS5, and Hydration tables."""
     init_schedule_db(db_path)
@@ -244,18 +259,18 @@ def insert_schedule_data(
             
             # 1. Majors Table
             cursor.execute(
-                "INSERT OR IGNORE INTO majors (course_prefix, major_name) VALUES (:course_prefix, :major_name)",
-                {'course_prefix': prefix, 'major_name': major_name}
+                "INSERT OR IGNORE INTO majors (course_prefix, major_name, major_code) VALUES (:course_prefix, :major_name, :major_code)",
+                {'course_prefix': prefix, 'major_name': major_name, 'major_code': major_code}
             )
             
             # 2. Courses Table (Hydration)
             cursor.execute("""
                 INSERT INTO courses (
                     course_id, term_code, year, quarter, college, major_name,
-                    course_prefix, course_number, course_title, has_prerequisites, notes
+                    course_prefix, course_number, course_title, gen_ed_reqs, has_prerequisites, notes
                 ) VALUES (
                     :course_id, :term_code, :year, :quarter, :college, :major_name,
-                    :course_prefix, :course_number, :course_title, :has_prerequisites, :notes
+                    :course_prefix, :course_number, :course_title, :gen_ed_reqs, :has_prerequisites, :notes
                 )
             """, {
                 'course_id'        : course_id,
@@ -267,6 +282,7 @@ def insert_schedule_data(
                 'course_prefix'    : prefix,
                 'course_number'    : c.get('course_number'),
                 'course_title'     : c.get('course_title'),
+                'gen_ed_reqs'      : "/".join(c.get('gen_ed_reqs', [])),
                 'has_prerequisites': int(c.get('has_prerequisites', False)),
                 'notes'            : c.get('notes')
                 }
