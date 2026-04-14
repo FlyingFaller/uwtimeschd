@@ -1,23 +1,22 @@
 import json
+from parse.schedule import CourseDict
 
-def print_schedule(courses):
+def print_schedule(courses: list[CourseDict]):
     """Prints the parsed schedule data in a readable, original-like format."""
     for course in courses:
         # Include the newly extracted course title here
-        title_str = f" - {course['course_title']}" if course.get('course_title') else ""
-        print(f"\n{course['course_prefix']} {course['course_number']}{title_str}  {course['prerequisites'] or ''}")
+        title_str = f" - {course['course_title']}"
+        print(f"\n{course['course_prefix']} {course['course_number']}{title_str} {course['gen_ed_reqs']} {course['prerequisites']}")
         
         if course['notes']: print(f"  Course Notes: {course['notes']}")
         print("  " + "-" * 115)
         print(f"  {'Restr':<6} {'SLN':<5} {'ID':<3} {'Cred':<4} {'Times':<20} {'Bldg Room':<10} {'Instructor':<18} {'Status':<6} {'Enrl':<8} {'Grades':<6} {'Fee':<4} {'Other'}")
         
-        for sec in course['sections']:
-            sv = lambda x: str(x) if x is not None else ""
-            
+        for sec in course['sections']: 
             # Format lists for output printing
-            t_list = [str(x) if x is not None else "" for x in sec['times']]
-            br_list = [str(x) if x is not None else "" for x in sec['building_room']]
-            i_list = [str(x) if x is not None else "" for x in sec['instructor']]
+            t_list  = sec['times']
+            br_list = sec['building_room']
+            i_list  = sec['instructor']
             
             num_rows = max(len(t_list), 1)
             
@@ -28,7 +27,7 @@ def print_schedule(courses):
                 
                 if row_idx == 0:
                     # Print the primary section row
-                    print(f"  {sv(sec['restrictions']):<6} {sv(sec['SLN']):<5} {sv(sec['section_id']):<3} {sv(sec['credits']):<4} {t:<20} {br:<10} {i:<18} {sv(sec['status']):<6} {sv(sec['enrollment_limit']):<8} {sv(sec['grades']):<6} {sv(sec['fee']):<4} {sv(sec['other'])}")
+                    print(f"  {sec['restrictions']:<6} {sec['SLN']:<5} {sec['section_id']:<3} {sec['credits']:<4} {t:<20} {br:<10} {i:<18} {sec['status']:<6} {sec['enrollment_limit']:<8} {sec['grades']:<6} {sec['fee']:<4} {sec['other']}")
                 else:
                     # Print the secondary meeting rows, aligned perfectly using a 22-space prefix
                     empty_prefix = " " * 22

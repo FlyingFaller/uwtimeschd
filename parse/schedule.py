@@ -1,32 +1,59 @@
 import re
-from bs4 import BeautifulSoup, NavigableString
+from bs4 import BeautifulSoup
+from bs4.element import Tag, PageElement, ResultSet
+from typing import TypedDict
 
-def parse_major_college(html_content):
+class SectionDict(TypedDict):
+    restrictions    : str
+    SLN             : str
+    section_id      : str
+    credits         : str
+    times           : list[str]
+    building_room   : list[str]
+    instructor      : list[str]
+    status          : str
+    enrollment_limit: str
+    grades          : str
+    fee             : str
+    other           : str
+    notes           : str | None
+
+class CourseDict(TypedDict):
+    course_prefix: str
+    course_number: str
+    course_title : str
+    gen_ed_reqs  : str
+    prerequisites: str
+    notes        : str | None
+    sections     : list[SectionDict]
+
+def parse_major_college(html_content: str) -> dict[str, str|None]:
     """
     Extracts the major and college from the header tags at the top of the schedule page.
     """
     soup = BeautifulSoup(html_content, 'html.parser')
-    major, college = None, None
-    
-    # Target the first table on the page
-    first_table = soup.find('table')
-    if first_table:
-        h2_tag = first_table.find('h2')
-        if h2_tag:
-            # stripped_strings naturally splits text separated by <br> tags
-            strings = list(h2_tag.stripped_strings)
+
+    first_table: Tag = soup.find('table')
+    if not first_table:
+        return {'major': None, 'college': None}
+        
+    h2_tag: Tag = first_table.find('h2')
+    if not h2_tag:
+        return {'major': None, 'college': None}
             
-            if len(strings) > 0:
-                major = strings[0]
-            if len(strings) > 1:
-                # Extract the college name from within the parentheses
-                college_match = re.search(r'\(([^)]+)\)', strings[1])
-                if college_match:
-                    college = college_match.group(1).strip()
+    strings = list(h2_tag.stripped_strings)
+    
+    major = strings[0] if len(strings) > 0 else None
+    college = None
+    
+    if len(strings) > 1:
+        college_match = re.search(r'\(([^)]+)\)', strings[1])
+        if college_match:
+            college = college_match.group(1).strip()
                     
     return {'major': major, 'college': college}
 
-def parse_schedule(html_content, pad_left=1, pad_right=1):
+def parse_schedule(html_content: str, pad_left: int = 1, pad_right: int = 1) -> list[CourseDict]:
     """
     Parses a UW Time Schedule HTML page using Dynamic Columnar Mapping.
     """
@@ -39,7 +66,7 @@ def parse_schedule(html_content, pad_left=1, pad_right=1):
     soup = BeautifulSoup(html_content, 'html.parser')
     courses = []
     current_course = None
-    tables = soup.find_all('table')
+    tables: ResultSet = soup.find_all('table')
     
     for table in tables:
         if is_course_header(table):
@@ -52,10 +79,8 @@ def parse_schedule(html_content, pad_left=1, pad_right=1):
             
             notes = extract_notes(table)
             if notes and sections:
-                if sections[-1]['notes']:
-                    sections[-1]['notes'] += ' ' + notes
-                else:
-                    sections[-1]['notes'] = notes
+                prev_notes = sections[-1].get('notes')
+                sections[-1]['notes'] = f"{prev_notes} {notes}" if prev_notes else notes
                     
             current_course['sections'].extend(sections)
             
@@ -63,7 +88,7 @@ def parse_schedule(html_content, pad_left=1, pad_right=1):
 
 # --- Columnar Mapping Logic ---
 
-def safe_find(line, *targets):
+def safe_find(line: str, *targets: str) -> int:
     """Returns the index of the first matching target string, or -1 if none found."""
     for t in targets:
         idx = line.find(t)
@@ -71,7 +96,7 @@ def safe_find(line, *targets):
             return idx
     return -1
 
-def get_column_boundaries(clean_text, pad_left=1, pad_right=1):
+def get_column_boundaries(clean_text: str, pad_left=1, pad_right=1) -> dict[str, tuple[int, int|None]]:
     """Finds the table header and maps the character start/end indices for each column."""
     for line in clean_text.split('\n'):
         if 'Restr' in line and 'SLN' in line and 'Cred' in line:
@@ -115,34 +140,33 @@ def get_column_boundaries(clean_text, pad_left=1, pad_right=1):
 
 # --- Extraction Subroutines (Returning Primitives) ---
 
-def extract_restrictions(chunk):
+def extract_restrictions(chunk: str) -> str:
     match = re.search(r'^([^0-9]+)', chunk)
     if match:
-        res = match.group(1).strip()
-        return res if res else None
-    return None
+        return match.group(1).strip()
+    return ""
 
-def extract_sln(chunk):
+def extract_sln(chunk: str) -> str:
     # Relaxed regex: The '>' character (Add Code Required) is often glued to the SLN. 
     # By removing the strict whitespace boundaries, we guarantee the 4-5 digit SLN is extracted.
     match = re.search(r'(\d{4,5})', chunk)
-    return match.group(1) if match else None
+    return match.group(1) if match else ""
 
-def extract_section_id(chunk):
+def extract_section_id(chunk: str) -> str:
     # Enforces that the 1-3 character ID is its own distinct "word" in the chunk
     match = re.search(r'(?:^|\s+)([A-Z0-9]{1,3})(?:\s+|$)', chunk)
-    return match.group(1) if match else None
+    return match.group(1) if match else ""
 
-def extract_credits(chunk):
+def extract_credits(chunk: str) -> str:
     match = re.search(r'(?:^|\s+)([\d\.\-/]+|VAR|[A-Z]{2})(?:\s+|$)', chunk)
-    return match.group(1) if match else None
+    return match.group(1) if match else ""
 
-def extract_times(chunk):
+def extract_times(chunk: str) -> str:
     # The Gap Anchor replaces the strict `^` anchor
     match = re.search(r'(?:^|\s+)(to be arranged|TBA|[a-zA-Z]+\s+\d{1,4}[-:]\d{1,4})', chunk)
-    return match.group(1) if match else None
+    return match.group(1) if match else ""
 
-def extract_building_room(chunk):
+def extract_building_room(chunk: str) -> str:
     if "TBA" in chunk:
         return "TBA"
         
@@ -152,70 +176,88 @@ def extract_building_room(chunk):
     if match:
         return f"{match.group(1)} {match.group(2)}"
         
-    return None
+    return ""
 
-def extract_instructor(chunk):
+def extract_instructor(chunk: str) -> str:
     # Instructors naturally contain spaces and commas. 
     # Best to strip stray digits (from building/room bleed) from the left edge.
     cleaned = re.sub(r'^[\d\s\*]+', '', chunk).strip()
-    return cleaned if cleaned else None
+    return cleaned or ""
 
-def extract_status(chunk):
+def extract_status(chunk: str) -> str:
     match = re.search(r'(?:^|\s+)([A-Za-z]{3,10})(?:\s+|$)', chunk)
-    return match.group(1) if match else None
+    return match.group(1) if match else ""
 
-def extract_enrollment(chunk):
+def extract_enrollment(chunk: str) -> str:
     match = re.search(r'(?:^|\s+)(\d+\s*/\s*\d+[a-zA-Z]?)(?:\s+|$)', chunk)
-    return match.group(1) if match else None
+    return match.group(1) if match else ""
 
-def extract_grades(chunk):
+def extract_grades(chunk: str) -> str:
     match = re.search(r'(?:^|\s+)([A-Z/]+)(?:\s+|$)', chunk)
-    return match.group(1) if match else None
+    return match.group(1) if match else ""
 
-def extract_fee(chunk):
+def extract_fee(chunk: str) -> str:
     match = re.search(r'(?:^|\s+)(\$\d+)(?:\s+|$)', chunk)
-    return match.group(1) if match else None
+    return match.group(1) if match else ""
 
-def extract_other(chunk):
+def extract_other(chunk: str) -> str:
     # The Gap Anchor ensures it skips over the trailing digits from the Fee column
     # Notice we capture group 1, omitting the need to match `\s` inside the character class
     match = re.search(r'(?:^|\s+)([ABOEHJRSW%#]+)(?:\s+|$)', chunk)
-    return match.group(1) if match else None
+    return match.group(1) if match else ""
 
-def extract_notes(table):
+def extract_notes(table: Tag) -> str|None:
     notes = []
-    curr = table.next_sibling
-    while curr and curr.name not in ['table', 'div', 'p', 'script', 'hr']:
-        text = str(curr).strip() if isinstance(curr, NavigableString) else (curr.get_text(strip=True) if curr.name != 'br' else "")
+    curr: PageElement = table.next_sibling
+    
+    while curr:
+        # 1. Type Narrowing Guard:
+        # If 'curr' is an HTML Tag, check if it's one of our boundary tags.
+        if isinstance(curr, Tag):
+            if curr.name in ['table', 'div', 'p', 'script', 'hr']:
+                break # Stop gathering notes
+                
+            # Handle specific <br> tags
+            text = "" if curr.name == 'br' else curr.get_text(strip=True)
+            
+        # 2. If it's NOT a Tag, it must be a NavigableString (raw text)
+        else:
+            text = str(curr).strip()
+            
+        # 3. Clean and append
         text = text.replace('"', '').strip()
         if text and not text.startswith('<'):
             notes.append(text)
+            
+        # Move to the next sibling
         curr = curr.next_sibling
     
     result = ' '.join(notes).strip()
-    return result if result else None
+    return result or None
 
-def get_line_chunks(line, boundaries):
+def get_line_chunks(line: str, boundaries: dict[str, tuple[int, int|None]]) -> dict[str, str]:
     """Slices a line into a dictionary of string chunks based on boundaries."""
     chunks = {}
     for col_name, (start, end) in boundaries.items():
         if end is None:
-            chunks[col_name] = line[start:] if len(line) > start else ""
+            # chunks[col_name] = line[start:] if len(line) > start else ""
+            chunks[col_name] = line[start:]
         else:
-            chunks[col_name] = line[start:end] if len(line) > start else ""
+            # chunks[col_name] = line[start:end] if len(line) > start else ""
+            chunks[col_name] = line[start:end]
     return chunks
 
 
 # --- Parsing Subroutines (Building Structures) ---
 
-def is_course_header(table):
+def is_course_header(table: Tag) -> bool:
     return table.find('a', attrs={'name': True}) is not None
 
-def is_section_table(table):
+def is_section_table(table: Tag) -> bool:
     return table.find('pre') is not None
 
-def parse_course_header(table):
-    a_name = table.find('a', attrs={'name': True})
+def parse_course_header(table: Tag) -> CourseDict:
+    a_name: Tag = table.find('a', attrs={'name': True})
     prefix_num_text = a_name.get_text(strip=True).replace('\xa0', ' ')
     
     m_prefix = re.match(r'^(.+?)\s+(\d{3})$', prefix_num_text)
@@ -225,52 +267,55 @@ def parse_course_header(table):
         prefix, num = prefix_num_text, ""
 
     # Find the course title (e.g., from <a href="/students/crscat/aa.html#aa210">ENGR STATICS</a>)
-    title_a = table.find('a', href=True)
+    title_a: Tag = table.find('a', href=True)
     course_title = title_a.get_text(strip=True) if title_a else ""
-        
-    prereq_td = table.find('td', align='right')
+
+    gen_ed_td: Tag = table.find('td', width='15%')
+    gen_ed_text = gen_ed_td.get_text(strip=True) if gen_ed_td else ""
+
+    prereq_td: Tag = table.find('td', align='right')
     prereq_text = prereq_td.get_text(strip=True) if prereq_td else ""
     
     return {
         'course_prefix': prefix,
         'course_number': num,
-        'course_title' : course_title if course_title else None,
-        'prerequisites': prereq_text if prereq_text else None,
+        'course_title' : course_title,
+        'gen_ed_reqs'  : gen_ed_text,
+        'prerequisites': prereq_text,
         'notes'        : None,
         'sections'     : []
     }
 
-def parse_section_row(chunks):
+def parse_section_row(chunks: dict[str, str]) -> SectionDict|None:
     """Attempts to parse base section data from sliced chunks (requires an SLN)."""
-    sln = extract_sln(chunks.get('sln', ''))
-    if not sln:
-        return None
+    sln = extract_sln(chunks['sln'])
+    if not sln: return None
     
-    t = extract_times(chunks.get('times', ''))
-    b = extract_building_room(chunks.get('bldg_room', ''))
-    i = extract_instructor(chunks.get('instructor', ''))
+    t = extract_times(chunks['times'])
+    b = extract_building_room(chunks['bldg_room'])
+    i = extract_instructor(chunks['instructor'])
     
     return {
-        'restrictions'    : extract_restrictions(chunks.get('restr', '')),
+        'restrictions'    : extract_restrictions(chunks['restr']),
         'SLN'             : sln,
-        'section_id'      : extract_section_id(chunks.get('id', '')),
-        'credits'         : extract_credits(chunks.get('cred', '')),
+        'section_id'      : extract_section_id(chunks['id']),
+        'credits'         : extract_credits(chunks['cred']),
         'times'           : [t],
         'building_room'   : [b],
         'instructor'      : [i],
-        'status'          : extract_status(chunks.get('status', '')),
-        'enrollment_limit': extract_enrollment(chunks.get('enrl', '')),
-        'grades'          : extract_grades(chunks.get('grades', '')),
-        'fee'             : extract_fee(chunks.get('fee', '')),
-        'other'           : extract_other(chunks.get('other', '')),
+        'status'          : extract_status(chunks['status']),
+        'enrollment_limit': extract_enrollment(chunks['enrl']),
+        'grades'          : extract_grades(chunks['grades']),
+        'fee'             : extract_fee(chunks['fee']),
+        'other'           : extract_other(chunks['other']),
         'notes'           : None
     }
 
-def parse_additional_times(chunks, current_section):
+def parse_additional_times(chunks: dict[str, str], current_section: SectionDict) -> bool:
     """Attempts to append additional meeting times and locations to an existing section."""
-    raw_t = chunks.get('times', '')
-    raw_b = chunks.get('bldg_room', '')
-    raw_i = chunks.get('instructor', '')
+    raw_t = chunks['times']
+    raw_b = chunks['bldg_room']
+    raw_i = chunks['instructor']
     
     t = extract_times(raw_t)
     bldg_str = extract_building_room(raw_b)
@@ -278,9 +323,9 @@ def parse_additional_times(chunks, current_section):
     
     # If a chunk contains text but fails its extraction regex, it is un-parseable text (i.e., a note).
     # We require all three chunks to either be completely empty or yield a successful extraction.
-    t_is_valid = (not raw_t.strip()) or (t is not None)
-    b_is_valid = (not raw_b.strip()) or (bldg_str is not None)
-    i_is_valid = (not raw_i.strip()) or (i is not None)
+    t_is_valid = (not raw_t.strip()) or (t != "")
+    b_is_valid = (not raw_b.strip()) or (bldg_str != "")
+    i_is_valid = (not raw_i.strip()) or (i != "")
     
     # If any of them failed their regex, this is a note masquerading as a meeting line.
     if not (t_is_valid and b_is_valid and i_is_valid):
@@ -297,7 +342,7 @@ def parse_additional_times(chunks, current_section):
         
     return True
 
-def parse_section_table(table, boundaries):
+def parse_section_table(table: Tag, boundaries: dict[str, tuple[int, int|None]]) -> list[SectionDict]:
     """Processes a section table's HTML to build a list of section dictionaries."""
     raw_html = str(table)
     raw_html = re.sub(r'<br\s*/?>', '\n', raw_html, flags=re.IGNORECASE)
