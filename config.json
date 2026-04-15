@@ -5,16 +5,17 @@
     "chunk_dir": "data/"
   },
   "scraping": {
-    "fetch_delay"           : 0.5,
-    "chunk_size_mb"         : 50,
-    "task_limit"            : null,
-    "base_url"              : "https://www.washington.edu/students/timeschd/",
-    "max_consecutive_errors": 3,
-    "retry_http_codes"      : null
+    "fetch_delay" : 0.5,
+    "chunk_size_mb": 50,
+    "task_limit"  : null,
+    "root_url"    : "https://www.washington.edu/students/timeschd/",
+    "max_errors"  : 3,
+    "retry_only"  : null,
+    "retry_except": null 
   },
   "targets": {
-    "start" : ["WIN", 2024],
-    "end"   : ["AUT", 2024],
-    "majors": ["aa", "meche", "cse", "appmath"]
+    "start_term"   : ["WIN", 2004],
+    "end_term"     : ["AUT", 2024],
+    "target_majors": ["aa", "meche", "cse", "appmath"]
   }
 }
