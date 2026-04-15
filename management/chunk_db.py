@@ -1,21 +1,23 @@
 import os
 import json
+import logging
 
-def chunk_database(db_path="data/schedules.db", chunk_size_mb=10):
+logger = logging.getLogger(__name__)
+
+def chunk_database(db_path: str = "data/schedules.db", chunk_size_mb: int = 10):
     """
     Physically splits a SQLite database into manageable chunks for HTTP-VFS
     and generates the required config.json manifest.
     """
     if not os.path.exists(db_path):
-        print(f"Error: Could not find database at '{db_path}'.")
-        print("Please ensure the database has been generated first.")
+        logging.error(f"Could not find database at '{db_path}'. Ensure the database has been generated.")
         return
 
-    print(f"Preparing to chunk '{db_path}'...")
+    logging.info(f"Preparing to chunk '{db_path}'.")
     
-    db_size = os.path.getsize(db_path)
+    db_size     = os.path.getsize(db_path)
     db_filename = os.path.basename(db_path)
-    out_dir = os.path.dirname(db_path)
+    out_dir     = os.path.dirname(db_path)
     
     # Convert MB to Bytes
     chunk_size_bytes = chunk_size_mb * 1024 * 1024 
@@ -51,14 +53,7 @@ def chunk_database(db_path="data/schedules.db", chunk_size_mb=10):
     manifest_path = os.path.join(out_dir, "config.json")
     with open(manifest_path, "w") as f:
         json.dump(manifest, f, indent=2)
-        
-    print(f"Success! Split {db_size} bytes into {len(chunk_files)} chunk(s).")
-    print(f"Generated WebAssembly manifest at: {manifest_path}")
-
-# if __name__ == "__main__":
-#     parser = argparse.ArgumentParser(description="Chunk a SQLite DB for sql.js-httpvfs")
-#     parser.add_argument("--db", type=str, default="data/schedules.db", help="Path to the SQLite database")
-#     parser.add_argument("--size", type=int, default=10, help="Chunk size in MB (default: 10)")
     
-#     args = parser.parse_args()
-#     chunk_database(args.db, args.size)
+    logger.info(f"Successfully chunked databased.")
+    logger.info(f"Split {db_size} bytes into {len(chunk_files)} chunk(s).")
+    logger.info(f"Generated WebAssembly manifest at: {manifest_path}.")

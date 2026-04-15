@@ -2,17 +2,20 @@ import json
 import os
 import glob
 import requests
-from typing import Tuple, Optional
+from typing import Any
 from time import sleep
+import logging
 
-def load_config(path="config.json"):
+logger = logging.getLogger(__name__)
+
+def load_config(path: str = "config.json") -> dict[str: dict[str: Any]]:
     """Loads the universal JSON configuration."""
     if not os.path.exists(path):
         raise FileNotFoundError(f"Configuration file not found at {path}")
     with open(path, 'r') as f:
         return json.load(f)
 
-def stitch_database(chunk_dir="data/", output_path="data/schedules.db"):
+def stitch_database(chunk_dir: str = "data/", output_path: str = "data/schedules.db") -> bool:
     """
     Reassembles .00, .01 chunks into a single SQLite file.
     Returns True if stitched, False if no chunks were found.
@@ -20,10 +23,11 @@ def stitch_database(chunk_dir="data/", output_path="data/schedules.db"):
     chunks = sorted(glob.glob(os.path.join(chunk_dir, "schedules.db.*")))
     
     if not chunks:
-        print(f"[STITCH] No chunks found in {chunk_dir}. Assuming fresh database.")
+        logger.warning(f"No chunks found in {chunk_dir}. Assuming fresh database.")
+        
         return False
         
-    print(f"[STITCH] Reassembling {len(chunks)} chunks into {output_path}...")
+    logger.info(f"Reassembling {len(chunks)} chunks into {output_path}.")
     
     # Ensure directory exists
     os.makedirs(os.path.dirname(output_path), exist_ok=True)
@@ -33,10 +37,10 @@ def stitch_database(chunk_dir="data/", output_path="data/schedules.db"):
             with open(chunk, 'rb') as infile:
                 outfile.write(infile.read())
                 
-    print("[STITCH] Reassembly complete.")
+    logger.info(f"Reassembly complete.")
     return True
 
-def fetch_page(url: str, delay=0.5) -> Tuple[Optional[int], Optional[str]]:
+def fetch_page(url: str, delay:float = 0.5) -> tuple[int, str|None]:
     """
     Fetches the HTML content of a given URL gracefully.
     
@@ -60,12 +64,14 @@ def fetch_page(url: str, delay=0.5) -> Tuple[Optional[int], Optional[str]]:
             if "<title>Shibboleth Authentication Request</title>" in response.text:
                 return 401, None
                 
-            return response.status_code, response.text
+            return response.status_code or 0, response.text
         else:
             # Returns the error code (e.g., 404, 500) but no HTML content
-            return response.status_code, None
+            logger.warning(f"Fetch completed with status code: {response.status_code}.")
+            return response.status_code or 0, None
             
     except requests.exceptions.RequestException as e:
         # Catches connection errors, DNS failures, timeouts, etc.
         # Returning None for the status code indicates a failure to even reach the server
+        logger.error(f"Failed to fetch with error {e}.")
         return 0, None
