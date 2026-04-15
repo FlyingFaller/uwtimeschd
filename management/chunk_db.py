@@ -55,5 +55,5 @@ def chunk_database(db_path: str = "data/schedules.db", chunk_size_mb: int = 10):
         json.dump(manifest, f, indent=2)
     
     logger.info(f"Successfully chunked databased.")
-    logger.info(f"Split {db_size} bytes into {len(chunk_files)} chunk(s).")
+    logger.info(f"Split {db_size:,} bytes into {len(chunk_files)} chunk(s).")
     logger.info(f"Generated WebAssembly manifest at: {manifest_path}.")
