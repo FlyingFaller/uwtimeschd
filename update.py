@@ -1,41 +1,55 @@
 import os
+import logging
+from typing import Any
 from management.utils import load_config, stitch_database
 from management.chunk_db import chunk_database
 from management.pipeline import run_worker_pipeline
 
+# Configure the global logging format
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s | %(levelname)-8s | %(message)s',
+    datefmt='%Y-%m-%d %H:%M:%S'
+)
+
+logger = logging.getLogger(__name__)
+
 def run(config=None):
-    """
-    Executes the standard update workflow. 
-    Can be called by manage.py or run directly as a standalone script.
-    """
     if config is None:
         config = load_config()
         
-    print("\n=== STARTING AUTOMATED UPDATE ===")
+    logger.info("Update pipeline workflow.")
     
-    # 1. Stitch the database (if chunks exist)
-    stitch_database(
-        chunk_dir   = config['paths']['chunk_dir'],
-        output_path = config['paths']['master_db']
-    )
+    paths   : dict[str, Any] = config.get('paths', {})
+    scraping: dict[str, Any] = config.get('scraping', {})
+    targets : dict[str, Any] = config.get('targets', {})
     
-    # 2. Run the scraping pipeline (using config file targets)
-    run_worker_pipeline(config)
-    
-    # 3. Chunk the newly updated database
-    print("\n--- 3. Chunking Database ---")
-    chunk_database(
-        db_path       = config['paths']['master_db'],
-        chunk_size_mb = config['scraping']['chunk_size_mb']
-    )
-    
-    # 4. Clean up the monolithic DB so Git doesn't commit it
-    if os.path.exists(config['paths']['master_db']):
-        os.remove(config['paths']['master_db'])
-        print(f"\n[CLEANUP] Deleted temporary monolithic database: {config['paths']['master_db']}")
-        
-    print("=== AUTOMATED UPDATE COMPLETE ===")
+    logger.info("Stiching database.")
 
-# Makes this script fully standalone for local testing
+    stitch_database(
+        chunk_dir   = paths.get('chunk_dir', 'data/'),
+        output_path = paths.get('master_db', 'data/schedules.db')
+    )
+
+    logger.info("Running pipeline worker.")
+    run_worker_pipeline(
+        queue_db_path  = paths.get('queue_db', 'data/queue.db'),
+        master_db_path = paths.get('master_db', 'data/schedules.db'),
+        **targets,
+        **scraping
+    )
+    
+    logger.info("Chunking database.")
+    chunk_database(
+        db_path       = paths.get('master_db', 'data/schedules.db'),
+        chunk_size_mb = scraping.get('chunk_size_mb', 50)
+    )
+    
+    logger.info("Removing monolithic database file.")
+    if os.path.exists(paths.get('master_db', '')):
+        os.remove(paths.get('master_db'))
+        
+    logger.info("Completed update workflow.")
+
 if __name__ == "__main__":
     run()
