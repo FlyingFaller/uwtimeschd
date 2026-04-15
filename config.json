@@ -6,7 +6,6 @@
   },
   "scraping": {
     "fetch_delay" : 0.5,
-    "chunk_size_mb": 50,
     "task_limit"  : null,
     "root_url"    : "https://www.washington.edu/students/timeschd/",
     "max_errors"  : 3,
@@ -15,7 +14,10 @@
   },
   "targets": {
     "start_term"   : ["WIN", 2004],
-    "end_term"     : ["AUT", 2024],
+    "end_term"     : null,
     "target_majors": ["aa", "meche", "cse", "appmath"]
+  },
+  "chunking": {
+    "chunk_size_mb": 50
   }
 }
