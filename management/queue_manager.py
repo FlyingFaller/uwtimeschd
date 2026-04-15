@@ -167,7 +167,7 @@ def discover_tasks(
             if tasks_added > 0:
                 logging.info(f"Added {tasks_added} new tasks to queue for term {curr_qtr} {curr_year}.")
             else:
-                logging.info(f"Term {curr_qtr} {curr_year}] is up to date.")
+                logging.info(f"Term {curr_qtr} {curr_year} is up to date.")
             
         curr_qtr, curr_year = get_next_quarter(curr_qtr, curr_year)
 
