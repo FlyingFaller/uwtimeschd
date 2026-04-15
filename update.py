@@ -23,6 +23,7 @@ def run(config=None):
     paths   : dict[str, Any] = config.get('paths', {})
     scraping: dict[str, Any] = config.get('scraping', {})
     targets : dict[str, Any] = config.get('targets', {})
+    chunking: dict[str, Any] = config.get('chunking', {})
     
     logger.info("Stiching database.")
 
@@ -32,22 +33,26 @@ def run(config=None):
     )
 
     logger.info("Running pipeline worker.")
-    run_worker_pipeline(
+    updates_made = run_worker_pipeline(
         queue_db_path  = paths.get('queue_db', 'data/queue.db'),
         master_db_path = paths.get('master_db', 'data/schedules.db'),
         **targets,
         **scraping
     )
     
-    logger.info("Chunking database.")
-    chunk_database(
-        db_path       = paths.get('master_db', 'data/schedules.db'),
-        chunk_size_mb = scraping.get('chunk_size_mb', 50)
-    )
-    
+    if updates_made:
+        logger.info("Chunking database.")
+        chunk_database(
+            db_path       = paths.get('master_db', 'data/schedules.db'),
+            chunk_size_mb = chunking.get('chunk_size_mb', 50)
+        )
+    else: 
+        logger.info("No changes to schedule database.")
+
     logger.info("Removing monolithic database file.")
-    if os.path.exists(paths.get('master_db', '')):
-        os.remove(paths.get('master_db'))
+    master_db = paths.get('master_db', '')
+    if os.path.exists(master_db):
+        os.remove(master_db)
         
     logger.info("Completed update workflow.")
 

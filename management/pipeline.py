@@ -6,6 +6,7 @@ from management.database_manager import init_schedule_db, insert_schedule_data
 from parse.schedule import parse_schedule, parse_major_college
 from parse.normalize import normalize_schedule_data
 from parse.verify import verify_schedule_data
+from contextlib import closing
 
 logger = logging.getLogger(__name__)
 
@@ -22,17 +23,19 @@ def run_worker_pipeline(
     max_errors    : int                    = 3,
     retry_only    : list[int] | None       = None,
     retry_except  : list[int] | None       = None
-):
+) -> bool:
     """
     The main discovery and scraping loop. 
     Accepts explicit, strongly-typed arguments. Configuration mapping belongs to the caller.
     """
-    # Open both database connections at the highest level
-    with sqlite3.connect(queue_db_path) as queue_conn, sqlite3.connect(master_db_path) as master_conn:
 
-        logger.info(f"Initializing databases.")
+    updates_made = False # Tracks whether schedule database changes were actually made
+
+    # Open both database connections at the highest level
+    with closing(sqlite3.connect(queue_db_path)) as queue_conn, closing(sqlite3.connect(master_db_path)) as master_conn:
+
+        logger.info(f"Initializing queue database.")
         init_queue_db(queue_conn, wipe=invalidate)
-        init_schedule_db(master_conn)
         
         logger.info(f"Generating tasks.")
         discover_tasks(
@@ -57,7 +60,10 @@ def run_worker_pipeline(
         
         if not tasks:
             logger.info(f"No pending tasks found in the queue.")
-            return
+            return False
+        
+        logger.info(f"Tasks generated. Initializing schedule database.")
+        init_schedule_db(master_conn)
             
         for task in tasks:
             url = f"{root_url}{task['quarter']}{task['year']}/{task['major']}.html"
@@ -92,6 +98,8 @@ def run_worker_pipeline(
                     # 4. Mark task as successful
                     mark_task_status(queue_conn, task['quarter'], task['year'], task['major'], status_code)
                     logger.info(f"Successfully parsed & saved {len(verified_courses)} courses for {major_name}.")
+
+                    updates_made = True
                     
                 except Exception as e:
                     # 0 indicates a total script failure during processing
@@ -104,3 +112,5 @@ def run_worker_pipeline(
                 logger.warning(f"Failed to fetch page with status code: {status_code}).")
                 
     logger.info(f"Worker finished.")
+
+    return updates_made
