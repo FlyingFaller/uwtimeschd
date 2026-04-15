@@ -204,6 +204,8 @@ def init_schedule_db(conn: sqlite3.Connection):
     # Hydration Indexes for fast Joins
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_sections_cid ON sections(course_id);")
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_meetings_sid ON meetings(section_id);")
+
+    conn.commit()
         
 
 # ==========================================
@@ -431,3 +433,5 @@ def insert_schedule_data(
             'course_id'  : course_id,
             'search_text': search_text
         })
+        
+    conn.commit()
