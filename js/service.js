@@ -31,6 +31,8 @@ export class CourseService {
                 title      : row.course_title || "Unknown Title",
                 quarter    : `${row.quarter} ${row.year}`,
                 notes      : row.course_notes,
+                hasPrereqs : row.has_prerequisites === 1,
+                genEd      : row.gen_ed_reqs ? row.gen_ed_reqs.split('/') : [],
                 sectionsMap: new Map()
             });
         }

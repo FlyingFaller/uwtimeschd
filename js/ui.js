@@ -64,7 +64,8 @@ export class UIManager {
 
     _createDetailsHtml(sec) {
         let html = '';
-        const detailBaseClass = "inline-block px-1.5 py-0.5 mr-1 mb-1 border rounded text-[9px] font-bold uppercase tracking-wider cursor-help";
+        // const detailBaseClass = "inline-block px-1.5 py-0.5 mr-1 mb-1 border rounded text-[9px] font-bold uppercase tracking-wider cursor-help";
+        const detailBaseClass = "inline-block px-1.5 py-0.5 border rounded text-[9px] font-bold uppercase tracking-wider cursor-help";
         
         if (sec.crnc) html += `<span class="${detailBaseClass} tag-slate" title="Credit / No Credit Only">CR/NC</span>`;
         if (sec.fee) html += `<span class="${detailBaseClass} tag-green" title="Extra Course Fee">Fee: $${sec.fee}</span>`;
@@ -107,7 +108,11 @@ export class UIManager {
                 <td class="py-2.5 px-2 text-[11px] font-medium text-theme-text-main whitespace-nowrap align-middle">${bldgHtml}</td>
                 <td class="py-2.5 px-2 text-[11px] font-medium text-theme-text-main align-middle">${instHtml}</td>
                 <td class="py-2.5 px-2 text-[11px] font-medium text-theme-text-muted align-middle">${sec.enrl} / ${sec.limit}</td>
-                <td class="py-2 px-2 max-w-[200px] align-middle">${this._createDetailsHtml(sec)}</td>
+                <td class="py-2 px-2 align-middle">
+                    <div class="flex flex-wrap gap-1">
+                        ${this._createDetailsHtml(sec)}
+                    </div>
+                </td>
             </tr>
         `;
 
@@ -115,9 +120,9 @@ export class UIManager {
             rowHtml += `
                 <tr>
                     <td colspan="9" class="bg-alert-amber border-b p-0">
-                        <div class="px-3 py-1.5 text-[11px] font-medium flex items-start gap-2 text-theme-text-main">
-                            <i data-lucide="info" class="w-3.5 h-3.5 mt-0.5 opacity-60 shrink-0 text-theme-status-wait"></i>
-                            <span class="font-mono leading-relaxed">${sec.notes}</span>
+                        <div class="px-3 py-1.5 text-[11px] font-mono font-medium flex items-start gap-2 text-theme-text-main">
+                            <i data-lucide="info" class="w-3.5 h-3.5 mt-0.5 opacity-70 shrink-0 text-theme-status-wait"></i>
+                            <span class="leading-relaxed">${sec.notes}</span>
                         </div>
                     </td>
                 </tr>
@@ -126,48 +131,81 @@ export class UIManager {
         return rowHtml;
     }
 
-    _createCourseCard(course) {
+    _createCourseCard(course, majorLookup = {}) {
         const sectionRowsHtml = course.sections.map(sec => this._createSectionRow(sec)).join('');
         const qColor = getQuarterColorClasses(course.quarter);
 
+        const code = majorLookup[course.prefix] || course.prefix; 
+        const slug = code.replace(/\s+/g, '').toLowerCase(); 
+        const anchor = `${course.prefix.replace(/\s+/g, '').toLowerCase()}${course.number}`;
+        const courseLink = `https://www.washington.edu/students/crscat/${slug}.html#${anchor}`;
+
+        const hasReqs = course.hasPrereqs || course.genEd.length > 0;
+
         return `
             <details class="course-card group bg-theme-surface border border-theme-border rounded-lg shadow-sm overflow-hidden mb-4">
-                <summary class="cursor-pointer p-4 border-b border-theme-border bg-theme-surface-hover flex flex-col md:flex-row md:items-center justify-between gap-4 transition-colors">
-                    <div class="flex items-center gap-3">
-                        <h2 class="text-lg font-extrabold text-theme-text-main tracking-tight flex items-center gap-2">
-                            ${course.prefix} ${course.number}
-                        </h2>
-                        <h3 class="text-[15px] text-theme-text-muted font-medium">${course.title}</h3>
-                    </div>
-                    <div class="flex items-center justify-between md:justify-end w-full md:w-auto gap-4 shrink-0">
-                        <span class="px-3 py-1 rounded-md border text-xs font-bold uppercase tracking-wider shadow-sm ${qColor}">${course.quarter}</span>
-                        <div class="text-theme-text-muted group-open:rotate-180 transition-transform duration-200 shrink-0 bg-theme-surface border border-theme-border rounded p-1 shadow-sm group-hover:bg-theme-surface-alt">
-                            <i data-lucide="chevron-down" class="w-4 h-4"></i>
+                
+                <summary class="cursor-pointer p-4 border-b border-theme-border bg-theme-surface hover:bg-theme-surface-hover transition-colors">
+                    
+                    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                        <a href="${courseLink}" target="_blank" rel="noopener noreferrer" class="flex items-center gap-3 group/link" onclick="event.stopPropagation()">
+                            <h2 class="text-lg font-extrabold text-theme-text-main tracking-tight flex items-center gap-2 transition-colors group-hover/link:text-theme-accent-main">
+                                ${course.prefix} ${course.number}
+                            </h2>
+                            <h3 class="text-[15px] text-theme-text-muted font-medium transition-colors group-hover/link:text-theme-accent-hover">
+                                ${course.title}
+                            </h3>
+                        </a>
+
+                        <div class="flex items-center justify-between md:justify-end w-full md:w-auto gap-4 shrink-0">
+                            <span class="px-3 py-1 rounded-md border text-xs font-bold uppercase tracking-wider shadow-sm ${qColor}">${course.quarter}</span>
+                            <div class="text-theme-text-muted group-open:rotate-180 transition-transform duration-200 shrink-0 bg-theme-surface border border-theme-border rounded p-1 shadow-sm group-hover:bg-theme-surface-alt">
+                                <i data-lucide="chevron-down" class="w-4 h-4"></i>
+                            </div>
                         </div>
                     </div>
+
+                    ${hasReqs ? `
+                        <div class="hidden group-open:flex flex-wrap gap-1.5 items-center mt-3">
+                            ${course.hasPrereqs ? `
+                                <span class="inline-flex items-center gap-1 px-1.5 py-0.5 border rounded text-[10px] font-bold uppercase tracking-wider tag-orange" title="Prerequisites Required">
+                                    <i data-lucide="alert-circle" class="w-3 h-3"></i> Prerequisites
+                                </span>
+                            ` : ''}
+                            ${course.genEd.map(req => `
+                                <span class="inline-flex items-center px-1.5 py-0.5 border rounded text-[10px] font-bold tracking-wider tag-indigo" title="General Education Requirement">
+                                    ${req}
+                                </span>
+                            `).join('')}
+                        </div>
+                    ` : ''}
                 </summary>
 
                 <div class="bg-theme-surface">
+                    
                     ${course.notes ? `
                         <div class="bg-alert-amber border-b px-4 py-2 text-[11px] font-mono font-medium flex gap-2 items-start text-theme-text-main">
-                            <i data-lucide="alert-circle" class="w-3.5 h-3.5 opacity-70 shrink-0 font-sans mt-0.5 text-theme-text-muted"></i>
+                            <i data-lucide="info" class="w-3.5 h-3.5 opacity-70 shrink-0 font-sans mt-0.5 text-theme-status-wait"></i>
                             <span class="leading-relaxed">${course.notes}</span>
                         </div>
                     ` : ''}
 
                     <div class="overflow-x-auto">
-                        <table class="w-full text-left border-collapse">
-                            <thead class="bg-theme-surface-hover text-[10px] uppercase font-bold text-theme-text-muted tracking-wider">
+                        
+                        <table class="w-full min-w-[900px] text-left border-collapse table-fixed">
+                            
+                            <thead class="bg-theme-surface-alt text-[10px] uppercase font-bold text-theme-text-muted tracking-wider">
                                 <tr>
-                                    <th class="py-2 px-3 border-b font-semibold whitespace-nowrap">SLN Sec Restr</th>
-                                    <th class="py-2 px-2 border-b font-semibold whitespace-nowrap">Type</th>
-                                    <th class="py-2 px-2 border-b font-semibold whitespace-nowrap">CR</th>
-                                    <th class="py-2 px-2 border-b font-semibold whitespace-nowrap">Days</th>
-                                    <th class="py-2 px-2 border-b font-semibold whitespace-nowrap">Time</th>
-                                    <th class="py-2 px-2 border-b font-semibold whitespace-nowrap">Bldg/Rm</th>
-                                    <th class="py-2 px-2 border-b font-semibold whitespace-nowrap">Instructor</th>
-                                    <th class="py-2 px-2 border-b font-semibold whitespace-nowrap">Enrl/Lim</th>
-                                    <th class="py-2 px-2 border-b font-semibold whitespace-nowrap">Details</th>
+                                    <th class="py-2 px-3 border-b font-semibold whitespace-nowrap w-[12%]">SLN Sec Restr</th>
+                                    <th class="py-2 px-2 border-b font-semibold whitespace-nowrap w-[7%]">Type</th>
+                                    <th class="py-2 px-2 border-b font-semibold whitespace-nowrap w-[5%]">CR</th>
+                                    <th class="py-2 px-2 border-b font-semibold whitespace-nowrap w-[8%]">Days</th>
+                                    <th class="py-2 px-2 border-b font-semibold whitespace-nowrap w-[12%]">Time</th>
+                                    <th class="py-2 px-2 border-b font-semibold whitespace-nowrap w-[12%]">Bldg/Rm</th>
+                                    <th class="py-2 px-2 border-b font-semibold whitespace-nowrap w-[15%]">Instructor</th>
+                                    <th class="py-2 px-2 border-b font-semibold whitespace-nowrap w-[9%]">Enrl/Lim</th>
+                                    
+                                    <th class="py-2 px-2 border-b font-semibold whitespace-nowrap w-auto">Details</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -180,7 +218,7 @@ export class UIManager {
         `;
     }
 
-    renderCourses(courses, totalMatches, append = false) {
+    renderCourses(courses, totalMatches, append = false, majorLookup = {}) {
         if (this.resultCount && totalMatches !== undefined) {
             this.resultCount.innerText = totalMatches;
         }
@@ -196,7 +234,7 @@ export class UIManager {
             return;
         }
 
-        const html = courses.map(course => this._createCourseCard(course)).join('');
+        const html = courses.map(course => this._createCourseCard(course, majorLookup)).join('');
 
         if (append) {
             const oldSentinel = document.getElementById('scroll-sentinel');

@@ -8,8 +8,13 @@ export class DatabaseManager {
     constructor(dbPath = "data/config.json") { 
         this.dbPath = dbPath;
         this.worker = null;
-        this._spacelessMajorMap = null; 
-        
+
+        this.majorsMetadata = {
+            list: [],
+            lookup: {},
+            spacelessMap: {}
+        };
+
         // DEBUG ONLY !
         this.debugMode = true; 
     }
@@ -50,6 +55,9 @@ export class DatabaseManager {
             };
 
             this.worker = await createDbWorker([workerConfig], workerUrl, wasmUrl);
+
+            await this._preloadMajorsMetadata();
+
             return true;
         } catch (error) {
             console.error("Database initialization failed:", error);
@@ -73,35 +81,54 @@ export class DatabaseManager {
         }
     }
 
-    async getUniqueMajors() {
-        if (!this.worker) throw new Error("Database not initialized");
-        const sql = `SELECT course_prefix, major_name FROM majors ORDER BY course_prefix ASC`;
-        
-        await this._debugQueryPlan(sql, "Fetch Unique Majors");
-        
+    async _preloadMajorsMetadata() {
+        const sql = `SELECT course_prefix, major_name, major_code FROM majors ORDER BY course_prefix ASC`;
         const rows = await this.worker.db.query(sql);
-        return rows.map(r => {
+        
+        rows.forEach(r => {
             const prefix = r.course_prefix.trim();
             const spaceless = prefix.replace(/\s+/g, '');
             let name = r.major_name ? r.major_name.trim() : '';
             if (spaceless !== prefix) name = name ? `${name} [${spaceless}]` : `[${spaceless}]`;
-            return { prefix, name };
+
+            this.majorsMetadata.list.push({ prefix, name });
+            this.majorsMetadata.lookup[prefix] = r.major_code;
+            
+            if (spaceless !== prefix) {
+                this.majorsMetadata.spacelessMap[spaceless] = prefix;
+            }
         });
     }
 
-    async _getSpacelessMajorMap() {
-        if (this._spacelessMajorMap) return this._spacelessMajorMap;
-        try {
-            const majors = await this.getUniqueMajors();
-            this._spacelessMajorMap = {};
-            majors.forEach(m => {
-                const official = m.prefix.toUpperCase();
-                const spaceless = official.replace(/\s+/g, '');
-                if (spaceless !== official) this._spacelessMajorMap[spaceless] = official; 
-            });
-            return this._spacelessMajorMap;
-        } catch (e) { return {}; }
-    }
+    // async getUniqueMajors() {
+    //     if (!this.worker) throw new Error("Database not initialized");
+    //     const sql = `SELECT course_prefix, major_name FROM majors ORDER BY course_prefix ASC`;
+        
+    //     await this._debugQueryPlan(sql, "Fetch Unique Majors");
+        
+    //     const rows = await this.worker.db.query(sql);
+    //     return rows.map(r => {
+    //         const prefix = r.course_prefix.trim();
+    //         const spaceless = prefix.replace(/\s+/g, '');
+    //         let name = r.major_name ? r.major_name.trim() : '';
+    //         if (spaceless !== prefix) name = name ? `${name} [${spaceless}]` : `[${spaceless}]`;
+    //         return { prefix, name };
+    //     });
+    // }
+
+    // async _getSpacelessMajorMap() {
+    //     if (this._spacelessMajorMap) return this._spacelessMajorMap;
+    //     try {
+    //         const majors = await this.getUniqueMajors();
+    //         this._spacelessMajorMap = {};
+    //         majors.forEach(m => {
+    //             const official = m.prefix.toUpperCase();
+    //             const spaceless = official.replace(/\s+/g, '');
+    //             if (spaceless !== official) this._spacelessMajorMap[spaceless] = official; 
+    //         });
+    //         return this._spacelessMajorMap;
+    //     } catch (e) { return {}; }
+    // }
 
     _buildBaseWhereClause(filters, ftsTerm) {
         let baseWhere = ["1=1"];
@@ -169,7 +196,8 @@ export class DatabaseManager {
         if (!this.worker) throw new Error("Database not initialized");
         if (signal?.aborted) throw new DOMException("Aborted", "AbortError");
 
-        const majorMap = await this._getSpacelessMajorMap();
+        // const majorMap = await this._getSpacelessMajorMap();
+        const majorMap = this.majorsMetadata.spacelessMap;
         const ftsTerm = sanitizeFts(filters.query, majorMap);
 
         const baseWhere = this._buildBaseWhereClause(filters, ftsTerm);
@@ -217,6 +245,7 @@ export class DatabaseManager {
         const hydrateSql = `
             SELECT 
                 c.course_id, c.course_prefix, c.course_number, c.course_title, c.quarter, c.year, c.notes as course_notes,
+                c.has_prerequisites, c.gen_ed_reqs,
                 s.section_id, s.is_primary, s.sln, s.section_type, s.credits_min, s.credits_max,
                 s.enrolled, s.enrollment_limit, s.notes as section_notes, s.restricted_registration,
                 s.add_code_required, s.is_credit_no_credit, s.fee,

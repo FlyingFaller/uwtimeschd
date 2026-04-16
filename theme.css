@@ -20,7 +20,7 @@
     /* Accent (UW Purple) */
     --accent-main : #7e22ce;     /* purple-700 */
     --accent-hover: #6b21a8;     /* purple-800 */
-    --accent-bg   : #faf5ff;     /* purple-50 */
+    --accent-bg   : #f3e8ff;     /* purple-100 */
     --accent-text : #7e22ce;     /* purple-700 */
 
     /* Statuses */
@@ -48,7 +48,7 @@
     /* Accent (Adapted for Dark Mode) */
     --accent-main : #9333ea;     /* purple-600 */
     --accent-hover: #a855f7;     /* purple-500 */
-    --accent-bg   : #3b0764;     /* purple-950 */
+    --accent-bg   : #2e1065;     /* purple-950 (Softer dark purple) */
     --accent-text : #d8b4fe;     /* purple-300 */
 
     /* Statuses */
@@ -77,19 +77,19 @@ details[open] summary ~ * { animation: slideDown 0.2s ease-in-out; }
 
 /* Quarter Badges & Hover States */
 .hover-badge-aut:hover:not(.active) { background-color: #fee2e2; color: #991b1b; }
-.dark .hover-badge-aut:hover:not(.active) { background-color: #7f1d1d; color: #fca5a5; }
+.dark .hover-badge-aut:hover:not(.active) { background-color: #7f1d1d; color: #fecaca; }
 
 .hover-badge-win:hover:not(.active) { background-color: #eff6ff; color: #1e3a8a; }
 .dark .hover-badge-win:hover:not(.active) { background-color: #1e3a8a; color: #bfdbfe; }
 
 .hover-badge-spr:hover:not(.active) { background-color: #f0fdf4; color: #14532d; }
-.dark .hover-badge-spr:hover:not(.active) { background-color: #14532d; color: #86efac; }
+.dark .hover-badge-spr:hover:not(.active) { background-color: #14532d; color: #bbf7d0; }
 
 .hover-badge-sum:hover:not(.active) { background-color: #fefce8; color: #713f12; }
-.dark .hover-badge-sum:hover:not(.active) { background-color: #713f12; color: #fde047; }
+.dark .hover-badge-sum:hover:not(.active) { background-color: #713f12; color: #fef08a; }
 
 .badge-aut { background-color: #ffcccc; color: #7f1d1d; border-color: #fca5a5; }
-.dark .badge-aut { background-color: #450a0a; color: #fca5a5; border-color: #7f1d1d; }
+.dark .badge-aut { background-color: #3f1616; color: #fca5a5; border-color: #7f1d1d; }
 
 .badge-win { background-color: #99ccff; color: #1e3a8a; border-color: #93c5fd; }
 .dark .badge-win { background-color: #172554; color: #93c5fd; border-color: #1e3a8a; }
@@ -138,7 +138,7 @@ details[open] summary ~ * { animation: slideDown 0.2s ease-in-out; }
 
 /* Alert Boxes */
 .bg-alert-amber { background-color: #fffbeb; color: #78350f; border-color: #fef3c7; }
-.dark .bg-alert-amber { background-color: #422006; color: #fef3c7; border-color: #78350f; }
+.dark .bg-alert-amber { background-color: #381e0b; color: #fde68a; border-color: #78350f; }
 
 .bg-alert-blue { background-color: #eff6ff; color: #1e3a8a; border-color: #dbeafe; }
 .dark .bg-alert-blue { background-color: #172554; color: #dbeafe; border-color: #1e3a8a; }

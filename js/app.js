@@ -329,7 +329,8 @@ class App {
 
     async populateDynamicMajors() {
         try {
-            const majors = await this.db.getUniqueMajors();
+            // const majors = await this.db.getUniqueMajors();
+            const majors = this.db.majorsMetadata.list;
             const container = this.dom.clearMajorsBtn.parentElement.parentElement.querySelector('.max-h-36');
             
             let html = `<label class="flex items-center gap-2 cursor-pointer hover:bg-theme-surface-hover p-1 rounded transition-colors"><input type="checkbox" class="accent-theme-accent-main major-checkbox" value="ALL" checked> All Departments</label>`;
@@ -408,7 +409,7 @@ class App {
             this.store.state.totalMatches = dbResults.totalMatches;
             this.store.state.currentOffset = limit === 'all' ? dbResults.allIds.length : 25;
             
-            this.ui.renderCourses(formattedCourses, dbResults.totalMatches, false); 
+            this.ui.renderCourses(formattedCourses, dbResults.totalMatches, false, this.db.majorsMetadata.lookup); 
             this.setupObserver();
             
             if (this.store.state.isExpanded || (formattedCourses.length > 0 && formattedCourses.length <= 3)) {
@@ -454,7 +455,7 @@ class App {
             const nextResults = CourseService.shapeDataForUI(nextRows);
             this.store.state.currentOffset += 25;
             
-            this.ui.renderCourses(nextResults, this.store.state.totalMatches, true); 
+            this.ui.renderCourses(nextResults, this.store.state.totalMatches, true, this.db.majorsMetadata.lookup); 
             
             if (this.store.state.isExpanded) this.ui.toggleAll(true);
             this.setupObserver();

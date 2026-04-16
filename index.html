@@ -15,7 +15,8 @@
             
             // --- CONFIGURATION ---
             // Set to 'dark', 'light', or 'system'
-            const defaultTheme = 'system'; 
+            // const defaultTheme = 'system'; 
+            const defaultTheme = 'light'
             // ---------------------
             
             if (defaultTheme === 'dark') {
@@ -324,7 +325,7 @@
         <header class="bg-theme-surface border-b border-theme-border shadow-sm z-10 shrink-0 flex flex-col">
             
             <!-- Tier 1: Search Bar -->
-            <div class="p-4 flex gap-3 max-w-6xl mx-auto w-full">
+            <div class="p-4 flex gap-3 w-full">
                 <div class="relative flex-1">
                     <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
                         <i data-lucide="search" class="text-theme-text-muted w-5 h-5"></i>
@@ -344,7 +345,7 @@
 
             <!-- Tier 2: Utility Bar -->
             <div class="bg-theme-surface-hover border-t border-theme-border px-4 py-2">
-                <div class="max-w-6xl mx-auto flex items-center justify-between w-full">
+                <div class="flex items-center justify-between w-full">
                     
                     <div class="flex items-center gap-4">
                         <div class="text-sm text-theme-text-muted">
@@ -375,7 +376,7 @@
         </header>
 
         <div class="flex-1 overflow-y-auto p-4 md:p-6 relative">
-            <div id="results-container" class="max-w-6xl mx-auto space-y-4">
+            <div id="results-container" class="space-y-4 w-full">
                 <!-- Courses injected here -->
             </div>
         </div>
