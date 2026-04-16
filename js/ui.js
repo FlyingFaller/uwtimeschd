@@ -95,7 +95,7 @@ export class UIManager {
         const rowBorderToggle = `border-b ${borderClass}`;
 
         const daysHtml = `<div class="space-y-1">${sec.meetings.map(m => `<div>${m.days}</div>`).join('')}</div>`;
-        const timeHtml = `<div class="space-y-1">${sec.meetings.map(m => `<div>${m.time || '-'}</div>`).join('')}</div>`;
+        const timeHtml = `<div class="space-y-1">${sec.meetings.map(m => `<div>${m.time}</div>`).join('')}</div>`;
         const bldgHtml = `<div class="space-y-1">${sec.meetings.map(m => `<div>${m.bldg}</div>`).join('')}</div>`;
         const instHtml = `<div class="space-y-1">${sec.meetings.map(m => `<div class="truncate max-w-[130px]" title="${m.instructor}">${m.instructor}</div>`).join('')}</div>`;
 

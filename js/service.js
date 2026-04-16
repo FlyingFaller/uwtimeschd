@@ -82,10 +82,10 @@ export class CourseService {
             const end   = formatTime(row.end_time);
             
             section.meetingsMap.set(row.meeting_id, {
-                days      : row.days || 'TBA',
-                time      : (start && end) ? `${start}-${end}`: (start || '-'),
-                bldg      : row.building_room || 'TBA',
-                instructor: row.instructor || '-'
+                days      : row.days || '',
+                time      : (start && end) ? `${start}-${end}`: (start || ''),
+                bldg      : row.building_room || '',
+                instructor: row.instructor || ''
             });
         }
     }
