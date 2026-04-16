@@ -64,7 +64,6 @@ export class UIManager {
 
     _createDetailsHtml(sec) {
         let html = '';
-        // const detailBaseClass = "inline-block px-1.5 py-0.5 mr-1 mb-1 border rounded text-[9px] font-bold uppercase tracking-wider cursor-help";
         const detailBaseClass = "inline-block px-1.5 py-0.5 border rounded text-[9px] font-bold uppercase tracking-wider cursor-help";
         
         if (sec.crnc) html += `<span class="${detailBaseClass} tag-slate" title="Credit / No Credit Only">CR/NC</span>`;
@@ -80,34 +79,43 @@ export class UIManager {
     }
 
     _createSectionRow(sec) {
+        const isPrimary = sec.isPrimary;
         const typeColor = sec.type === 'LC' ? 'tag-blue' : (sec.type === 'QZ' ? 'tag-orange' : (sec.type === 'IS' ? 'tag-purple' : 'tag-slate'));
         const typeTooltip = TYPE_TITLES[sec.type] || sec.type;
         
-        const rowBgClass = sec.isPrimary ? 'bg-theme-accent-bg hover:brightness-95 dark:hover:brightness-110 border-theme-border' : 'bg-theme-surface hover:bg-theme-surface-hover border-theme-surface-alt';
-        const idTextClass = sec.isPrimary ? 'text-theme-text-main' : 'text-theme-text-muted';
+        // Use our isolated primary-row colors
+        const rowBgClass = isPrimary ? 'bg-theme-row-primary hover:bg-theme-row-primary-hover' : 'bg-theme-surface hover:bg-theme-surface-hover';
         
+        const textClass = isPrimary ? 'text-theme-text-main font-bold' : 'text-theme-text-muted font-medium';
+        const baseTdClass = `py-2.5 px-2 text-[11px] align-middle ${textClass}`;
+        const tabularTdClass = `${baseTdClass} tabular-nums`;
+
+        // We ALWAYS apply the bottom border now to separate the row from its notes.
+        const borderClass = isPrimary ? 'border-theme-border' : 'border-theme-surface-alt';
+        const rowBorderToggle = `border-b ${borderClass}`;
+
         const daysHtml = `<div class="space-y-1">${sec.meetings.map(m => `<div>${m.days}</div>`).join('')}</div>`;
         const timeHtml = `<div class="space-y-1">${sec.meetings.map(m => `<div>${m.time || '-'}</div>`).join('')}</div>`;
         const bldgHtml = `<div class="space-y-1">${sec.meetings.map(m => `<div>${m.bldg}</div>`).join('')}</div>`;
         const instHtml = `<div class="space-y-1">${sec.meetings.map(m => `<div class="truncate max-w-[130px]" title="${m.instructor}">${m.instructor}</div>`).join('')}</div>`;
 
         let rowHtml = `
-            <tr class="border-b ${rowBgClass} transition-colors">
-                <td class="py-2.5 px-3 font-mono text-xs text-theme-text-muted whitespace-nowrap align-middle">
-                    ${sec.sln} 
-                    <span class="text-[10px] font-extrabold ${idTextClass} mx-1">${sec.id}</span>
+            <tr class="${rowBorderToggle} ${rowBgClass} transition-colors">
+                <td class="py-2.5 px-3 text-xs whitespace-nowrap align-middle">
+                    <span class="${textClass} tabular-nums">${sec.sln}</span>
+                    <span class="${textClass} tabular-nums ml-1.5">${sec.id}</span>
                     ${sec.restr ? `<span class="inline-flex items-center cursor-help ml-1" title="Restricted: Check course requirements"><i data-lucide="lock" class="w-3 h-3 text-theme-status-err opacity-80"></i></span>` : ''}
                     ${sec.addCode ? `<span class="inline-flex items-center cursor-help ml-0.5" title="Add Code Required"><i data-lucide="key" class="w-3 h-3 text-theme-status-wait opacity-80"></i></span>` : ''}
                 </td>
                 <td class="py-2.5 px-2 align-middle">
-                    <span class="px-1.5 py-0.5 rounded text-[10px] font-bold ${typeColor} cursor-help" title="${typeTooltip}">${sec.type}</span>
+                    <span class="px-1.5 py-0.5 border rounded text-[10px] font-bold ${typeColor} cursor-help" title="${typeTooltip}">${sec.type}</span>
                 </td>
-                <td class="py-2.5 px-2 text-[11px] font-medium text-theme-text-main align-middle">${sec.cred}</td>
-                <td class="py-2.5 px-2 text-[11px] font-semibold text-theme-text-main whitespace-nowrap align-middle">${daysHtml}</td>
-                <td class="py-2.5 px-2 text-[11px] font-medium text-theme-text-main whitespace-nowrap align-middle">${timeHtml}</td>
-                <td class="py-2.5 px-2 text-[11px] font-medium text-theme-text-main whitespace-nowrap align-middle">${bldgHtml}</td>
-                <td class="py-2.5 px-2 text-[11px] font-medium text-theme-text-main align-middle">${instHtml}</td>
-                <td class="py-2.5 px-2 text-[11px] font-medium text-theme-text-muted align-middle">${sec.enrl} / ${sec.limit}</td>
+                <td class="${tabularTdClass}">${sec.cred}</td>
+                <td class="${baseTdClass} whitespace-nowrap">${daysHtml}</td>
+                <td class="${baseTdClass} whitespace-nowrap">${timeHtml}</td>
+                <td class="${baseTdClass} whitespace-nowrap">${bldgHtml}</td>
+                <td class="${baseTdClass}">${instHtml}</td>
+                <td class="${tabularTdClass}">${sec.enrl} / ${sec.limit}</td>
                 <td class="py-2 px-2 align-middle">
                     <div class="flex flex-wrap gap-1">
                         ${this._createDetailsHtml(sec)}
@@ -118,9 +126,9 @@ export class UIManager {
 
         if (sec.notes) {
             rowHtml += `
-                <tr>
-                    <td colspan="9" class="bg-alert-amber border-b p-0">
-                        <div class="px-3 py-1.5 text-[11px] font-mono font-medium flex items-start gap-2 text-theme-text-main">
+                <tr class="border-b ${borderClass}">
+                    <td colspan="9" class="bg-alert-amber p-0">
+                        <div class="px-3 py-2 text-[11px] font-medium flex items-start gap-2">
                             <i data-lucide="info" class="w-3.5 h-3.5 mt-0.5 opacity-70 shrink-0 text-theme-status-wait"></i>
                             <span class="leading-relaxed">${sec.notes}</span>
                         </div>
@@ -131,7 +139,7 @@ export class UIManager {
         return rowHtml;
     }
 
-    _createCourseCard(course, majorLookup = {}) {
+_createCourseCard(course, majorLookup = {}) {
         const sectionRowsHtml = course.sections.map(sec => this._createSectionRow(sec)).join('');
         const qColor = getQuarterColorClasses(course.quarter);
 
@@ -143,9 +151,9 @@ export class UIManager {
         const hasReqs = course.hasPrereqs || course.genEd.length > 0;
 
         return `
-            <details class="course-card group bg-theme-surface border border-theme-border rounded-lg shadow-sm overflow-hidden mb-4">
+            <details class="course-card group/card bg-theme-surface border border-theme-border rounded-lg shadow-sm overflow-hidden mb-4">
                 
-                <summary class="cursor-pointer p-4 border-b border-theme-border bg-theme-surface hover:bg-theme-surface-hover transition-colors">
+                <summary class="cursor-pointer px-4 pt-4 pb-4 group-open/card:pb-1.5 border-b border-theme-border group-open/card:border-b-0 bg-theme-surface hover:bg-theme-surface-hover [details:has(thead:hover)_&]:bg-theme-surface-hover transition-colors group/summary">
                     
                     <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
                         <a href="${courseLink}" target="_blank" rel="noopener noreferrer" class="flex items-center gap-3 group/link" onclick="event.stopPropagation()">
@@ -159,17 +167,17 @@ export class UIManager {
 
                         <div class="flex items-center justify-between md:justify-end w-full md:w-auto gap-4 shrink-0">
                             <span class="px-3 py-1 rounded-md border text-xs font-bold uppercase tracking-wider shadow-sm ${qColor}">${course.quarter}</span>
-                            <div class="text-theme-text-muted group-open:rotate-180 transition-transform duration-200 shrink-0 bg-theme-surface border border-theme-border rounded p-1 shadow-sm group-hover:bg-theme-surface-alt">
+                            <div class="text-theme-text-muted group-open/card:rotate-180 transition-transform duration-200 shrink-0 bg-theme-surface border border-theme-border rounded p-1 shadow-sm group-hover/summary:bg-theme-surface-alt [details:has(thead:hover)_&]:bg-theme-surface-alt">
                                 <i data-lucide="chevron-down" class="w-4 h-4"></i>
                             </div>
                         </div>
                     </div>
 
-                    ${hasReqs ? `
-                        <div class="hidden group-open:flex flex-wrap gap-1.5 items-center mt-3">
+                    ${(hasReqs || course.notes) ? `
+                        <div class="hidden group-open/card:flex flex-wrap items-center gap-x-2 gap-y-1.5 mt-2">
                             ${course.hasPrereqs ? `
-                                <span class="inline-flex items-center gap-1 px-1.5 py-0.5 border rounded text-[10px] font-bold uppercase tracking-wider tag-orange" title="Prerequisites Required">
-                                    <i data-lucide="alert-circle" class="w-3 h-3"></i> Prerequisites
+                                <span class="inline-flex items-center gap-1 px-1.5 py-0.5 border rounded text-[10px] font-bold uppercase tracking-wider tag-red" title="Prerequisites Required">
+                                    <i data-lucide="alert-circle" class="w-3 h-3"></i> PREREQS
                                 </span>
                             ` : ''}
                             ${course.genEd.map(req => `
@@ -177,35 +185,31 @@ export class UIManager {
                                     ${req}
                                 </span>
                             `).join('')}
+                            ${course.notes ? `
+                                <span class="flex items-center gap-1.5 text-[11px] text-theme-text-muted font-medium ml-1">
+                                    <i data-lucide="info" class="w-3.5 h-3.5 opacity-70 shrink-0"></i>
+                                    <span class="leading-relaxed">${course.notes}</span>
+                                </span>
+                            ` : ''}
                         </div>
                     ` : ''}
                 </summary>
 
                 <div class="bg-theme-surface">
-                    
-                    ${course.notes ? `
-                        <div class="bg-alert-amber border-b px-4 py-2 text-[11px] font-mono font-medium flex gap-2 items-start text-theme-text-main">
-                            <i data-lucide="info" class="w-3.5 h-3.5 opacity-70 shrink-0 font-sans mt-0.5 text-theme-status-wait"></i>
-                            <span class="leading-relaxed">${course.notes}</span>
-                        </div>
-                    ` : ''}
-
                     <div class="overflow-x-auto">
-                        
                         <table class="w-full min-w-[900px] text-left border-collapse table-fixed">
                             
-                            <thead class="bg-theme-surface-alt text-[10px] uppercase font-bold text-theme-text-muted tracking-wider">
+                            <thead class="bg-theme-surface hover:bg-theme-surface-hover [details:has(summary:hover)_&]:bg-theme-surface-hover transition-colors text-[10px] uppercase font-extrabold text-theme-text-muted tracking-wider border-b-2 border-theme-border">
                                 <tr>
-                                    <th class="py-2 px-3 border-b font-semibold whitespace-nowrap w-[12%]">SLN Sec Restr</th>
-                                    <th class="py-2 px-2 border-b font-semibold whitespace-nowrap w-[7%]">Type</th>
-                                    <th class="py-2 px-2 border-b font-semibold whitespace-nowrap w-[5%]">CR</th>
-                                    <th class="py-2 px-2 border-b font-semibold whitespace-nowrap w-[8%]">Days</th>
-                                    <th class="py-2 px-2 border-b font-semibold whitespace-nowrap w-[12%]">Time</th>
-                                    <th class="py-2 px-2 border-b font-semibold whitespace-nowrap w-[12%]">Bldg/Rm</th>
-                                    <th class="py-2 px-2 border-b font-semibold whitespace-nowrap w-[15%]">Instructor</th>
-                                    <th class="py-2 px-2 border-b font-semibold whitespace-nowrap w-[9%]">Enrl/Lim</th>
-                                    
-                                    <th class="py-2 px-2 border-b font-semibold whitespace-nowrap w-auto">Details</th>
+                                    <th class="py-2 px-3 border-none font-semibold whitespace-nowrap w-[12%] bg-transparent">SLN Sec Restr</th>
+                                    <th class="py-2 px-2 border-none font-semibold whitespace-nowrap w-[7%] bg-transparent">Type</th>
+                                    <th class="py-2 px-2 border-none font-semibold whitespace-nowrap w-[5%] bg-transparent">CR</th>
+                                    <th class="py-2 px-2 border-none font-semibold whitespace-nowrap w-[8%] bg-transparent">Days</th>
+                                    <th class="py-2 px-2 border-none font-semibold whitespace-nowrap w-[12%] bg-transparent">Time</th>
+                                    <th class="py-2 px-2 border-none font-semibold whitespace-nowrap w-[12%] bg-transparent">Bldg/Rm</th>
+                                    <th class="py-2 px-2 border-none font-semibold whitespace-nowrap w-[15%] bg-transparent">Instructor</th>
+                                    <th class="py-2 px-2 border-none font-semibold whitespace-nowrap w-[9%] bg-transparent">Enrl/Lim</th>
+                                    <th class="py-2 px-2 border-none font-semibold whitespace-nowrap w-auto bg-transparent">Details</th>
                                 </tr>
                             </thead>
                             <tbody>

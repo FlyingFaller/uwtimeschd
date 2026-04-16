@@ -1,60 +1,68 @@
 :root {
     /* Backgrounds */
-    --bg-canvas       : #f1f5f9;     /* slate-100 (Lightened for better contrast) */
-    --bg-surface      : #ffffff;     /* white */
-    --bg-surface-hover: #f8fafc;     /* slate-50 */
-    --bg-surface-alt  : #e2e8f0;     /* slate-200 (Darkened slightly for toggle tracks) */
+    --bg-canvas       : #f8f7fa;     /* Slightly cooler light grey */
+    --bg-surface      : #ffffff;     /* Crisp white */
+    --bg-surface-hover: #f0eef5;     /* Darkened hover state for better visibility */
+    --bg-surface-alt  : #e9e6f0;     /* Neutral purple-grey for inputs/headers */
     
     /* Typography */
     --font-sans: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
     --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
     
-    --text-main   : #1e293b;     /* slate-800 */
-    --text-muted  : #64748b;     /* slate-500 */
+    --text-main   : #1e1b24;     /* Crisp dark text */
+    --text-muted  : #625c6e;     /* Muted secondary text */
     --text-inverse: #ffffff;     /* Pure white */
     
     /* Borders */
-    --border-color: #cbd5e1;     /* slate-300 */
-    --border-focus: #7e22ce;     /* Focus ring color */
+    --border-color: #d5d0df;     /* Subtle border */
+    --border-focus: #32006e;     /* Husky Purple */
     
-    /* Accent (UW Purple) */
-    --accent-main : #7e22ce;     /* purple-700 */
-    --accent-hover: #6b21a8;     /* purple-800 */
-    --accent-bg   : #f3e8ff;     /* purple-100 */
-    --accent-text : #7e22ce;     /* purple-700 */
+    /* Accent (UW Colors - Buttons & Inputs) */
+    --accent-main : #32006e;     /* Husky Purple */
+    --accent-hover: #4b00a6;     /* Brighter Purple */
+    --accent-bg   : #f3f0f9;     /* Light purple background for active buttons */
+    --accent-text : #32006e;     /* Husky Purple */
+
+    /* Primary Rows */
+    --row-primary       : #f3f0f9;  /* Light purple background */
+    --row-primary-hover : #e7e1f2;  /* Noticeably darker purple for hover */
 
     /* Statuses */
-    --status-wait: #f59e0b;     /* amber-500 */
-    --status-ok  : #059669;     /* emerald-600 */
-    --status-err : #dc2626;     /* red-600 */
+    --status-wait: #85754d;      /* Heritage Gold */
+    --status-ok  : #059669;      /* Emerald */
+    --status-err : #dc2626;      /* Red */
 }
 
 .dark {
     /* Backgrounds */
-    --bg-canvas       : #020617;     /* slate-950 (Deepest background) */
-    --bg-surface      : #0f172a;     /* slate-900 (Main cards and sidebar) */
-    --bg-surface-alt  : #1e293b;     /* slate-800 (Inputs, Primary Sections - Lightened!) */
-    --bg-surface-hover: #334155;     /* slate-700 (Hover states) */
+    --bg-canvas       : #0e0b14;     /* Deep dark purple-black */
+    --bg-surface      : #18141f;     /* Main surface */
+    --bg-surface-alt  : #2b2438;     /* Neutral dark purple-grey for inputs */
+    --bg-surface-hover: #241e2e;     /* Hover state */
     
     /* Typography */
-    --text-main   : #f8fafc;     /* slate-50 */
-    --text-muted  : #94a3b8;     /* slate-400 */
-    --text-inverse: #ffffff;     /* Pure white */
+    --text-main   : #eae6f2;     /* Off-white text */
+    --text-muted  : #9c95a6;     /* Muted text */
+    --text-inverse: #18141f;     /* Dark surface for inverse text */
     
     /* Borders */
-    --border-color: #475569;     /* slate-600 */
-    --border-focus: #a855f7;     /* purple-500 */
+    --border-color: #3f3652;     /* Dark purple-grey border */
+    --border-focus: #85754d;     /* Heritage Gold */
     
-    /* Accent (Adapted for Dark Mode) */
-    --accent-main : #9333ea;     /* purple-600 */
-    --accent-hover: #a855f7;     /* purple-500 */
-    --accent-bg   : #2e1065;     /* purple-950 (Softer dark purple) */
-    --accent-text : #d8b4fe;     /* purple-300 */
+    /* Accent (Adapted for Dark Mode - Buttons & Inputs) */
+    --accent-main : #85754d;     /* Heritage Gold */
+    --accent-hover: #a39161;     /* Lighter Heritage Gold */
+    --accent-bg   : #2b2319;     /* Translucent dark gold for active buttons! */
+    --accent-text : #e8e3d3;     /* Husky Gold */
+
+    /* Primary Rows */
+    --row-primary       : #201630;  /* Deep Husky Purple background */
+    --row-primary-hover : #2a1d40;  /* Highly visible lighter purple for hover! */
 
     /* Statuses */
-    --status-wait: #fbbf24;      /* amber-400 */
-    --status-ok  : #34d399;      /* emerald-400 */
-    --status-err : #f87171;      /* red-400 */
+    --status-wait: #b5a372;      /* Lightened Heritage Gold */
+    --status-ok  : #34d399;      /* Emerald */
+    --status-err : #f87171;      /* Red */
 }
 
 /* Base DOM Adjustments */
@@ -72,21 +80,20 @@ details[open] summary ~ * { animation: slideDown 0.2s ease-in-out; }
 
 /* =========================================
    Semantic Badges & Tags
-   These automatically adjust contrast based on Light/Dark mode
    ========================================= */
 
 /* Quarter Badges & Hover States */
 .hover-badge-aut:hover:not(.active) { background-color: #fee2e2; color: #991b1b; }
-.dark .hover-badge-aut:hover:not(.active) { background-color: #7f1d1d; color: #fecaca; }
+.dark .hover-badge-aut:hover:not(.active) { background-color: #5c1818; color: #fecaca; }
 
 .hover-badge-win:hover:not(.active) { background-color: #eff6ff; color: #1e3a8a; }
-.dark .hover-badge-win:hover:not(.active) { background-color: #1e3a8a; color: #bfdbfe; }
+.dark .hover-badge-win:hover:not(.active) { background-color: #16285c; color: #bfdbfe; }
 
 .hover-badge-spr:hover:not(.active) { background-color: #f0fdf4; color: #14532d; }
-.dark .hover-badge-spr:hover:not(.active) { background-color: #14532d; color: #bbf7d0; }
+.dark .hover-badge-spr:hover:not(.active) { background-color: #0d381e; color: #bbf7d0; }
 
 .hover-badge-sum:hover:not(.active) { background-color: #fefce8; color: #713f12; }
-.dark .hover-badge-sum:hover:not(.active) { background-color: #713f12; color: #fef08a; }
+.dark .hover-badge-sum:hover:not(.active) { background-color: #4a290a; color: #fef08a; }
 
 .badge-aut { background-color: #ffcccc; color: #7f1d1d; border-color: #fca5a5; }
 .dark .badge-aut { background-color: #3f1616; color: #fca5a5; border-color: #7f1d1d; }
@@ -100,45 +107,45 @@ details[open] summary ~ * { animation: slideDown 0.2s ease-in-out; }
 .badge-sum { background-color: #ffffcc; color: #713f12; border-color: #fde047; }
 .dark .badge-sum { background-color: #422006; color: #fde047; border-color: #713f12; }
 
-/* UI Tags (Course Types & Attributes) */
+/* UI Tags - Harmonized with UW Palette & High Contrast */
 .tag-slate { background-color: var(--bg-surface-alt); color: var(--text-muted); border-color: var(--border-color); }
 
-.tag-blue { background-color: #dbeafe; color: #1e40af; border-color: #bfdbfe; }
-.dark .tag-blue { background-color: #1e3a8a; color: #bfdbfe; border-color: #1e40af; }
+.tag-blue { background-color: #e8f0fe; color: #1a4073; border-color: #c2d6f2; }
+.dark .tag-blue { background-color: #16263b; color: #a1c2f7; border-color: #254066; }
 
-.tag-orange { background-color: #ffedd5; color: #9a3412; border-color: #fed7aa; }
-.dark .tag-orange { background-color: #7c2d12; color: #fed7aa; border-color: #9a3412; }
+.tag-orange { background-color: #faebe3; color: #7a3a1f; border-color: #ebd1c5; }
+.dark .tag-orange { background-color: #3b1d11; color: #e6a88a; border-color: #66321d; }
 
-.tag-purple { background-color: #f3e8ff; color: #6b21a8; border-color: #e9d5ff; }
-.dark .tag-purple { background-color: #4c1d95; color: #e9d5ff; border-color: #6b21a8; }
+.tag-purple { background-color: #f1eafa; color: #32006e; border-color: #d8c2f5; }
+.dark .tag-purple { background-color: #211138; color: #c09ef5; border-color: #3f2266; }
 
-.tag-green { background-color: #dcfce7; color: #166534; border-color: #bbf7d0; }
-.dark .tag-green { background-color: #14532d; color: #bbf7d0; border-color: #166534; }
+.tag-green { background-color: #e4f5e9; color: #1f5c35; border-color: #bfe6cb; }
+.dark .tag-green { background-color: #13331e; color: #8cd4a5; border-color: #225934; }
 
-.tag-indigo { background-color: #e0e7ff; color: #3730a3; border-color: #c7d2fe; }
-.dark .tag-indigo { background-color: #312e81; color: #c7d2fe; border-color: #3730a3; }
+.tag-indigo { background-color: #ebeaf7; color: #363185; border-color: #c4c1ed; }
+.dark .tag-indigo { background-color: #1c1a40; color: #9da0f2; border-color: #312e73; }
 
-.tag-fuchsia { background-color: #fae8ff; color: #86198f; border-color: #f5d0fe; }
-.dark .tag-fuchsia { background-color: #701a75; color: #f5d0fe; border-color: #86198f; }
+.tag-fuchsia { background-color: #fce8f8; color: #8a1f79; border-color: #f2c7e9; }
+.dark .tag-fuchsia { background-color: #401037; color: #f2a0e2; border-color: #731e64; }
 
-.tag-teal { background-color: #ccfbf1; color: #115e59; border-color: #99f6e4; }
-.dark .tag-teal { background-color: #134e4a; color: #99f6e4; border-color: #115e59; }
+.tag-teal { background-color: #e0f5f2; color: #1a6b62; border-color: #b5e8e1; }
+.dark .tag-teal { background-color: #0e3b36; color: #74d6c8; border-color: #1a6b62; }
 
-.tag-sky { background-color: #e0f2fe; color: #075985; border-color: #bae6fd; }
-.dark .tag-sky { background-color: #0c4a6e; color: #bae6fd; border-color: #075985; }
+.tag-sky { background-color: #e6f3fa; color: #1a618a; border-color: #bce0f5; }
+.dark .tag-sky { background-color: #0d3247; color: #8ad2f7; border-color: #175478; }
 
-.tag-emerald { background-color: #d1fae5; color: #065f46; border-color: #a7f3d0; }
-.dark .tag-emerald { background-color: #064e3b; color: #a7f3d0; border-color: #065f46; }
+.tag-emerald { background-color: #e0f7eb; color: #1c7546; border-color: #b3ebcc; }
+.dark .tag-emerald { background-color: #0f4026; color: #76e3a6; border-color: #1c7546; }
 
-.tag-lime { background-color: #ecfccb; color: #3f6212; border-color: #d9f99d; }
-.dark .tag-lime { background-color: #365314; color: #d9f99d; border-color: #3f6212; }
+.tag-lime { background-color: #f4fae1; color: #516b18; border-color: #dcebaf; }
+.dark .tag-lime { background-color: #2b3b0d; color: #badb6b; border-color: #4a6316; }
 
-.tag-red { background-color: #fee2e2; color: #991b1b; border-color: #fecaca; }
-.dark .tag-red { background-color: #7f1d1d; color: #fecaca; border-color: #991b1b; }
+.tag-red { background-color: #fcebe8; color: #942516; border-color: #f2c9c2; }
+.dark .tag-red { background-color: #4a130b; color: #f59a8c; border-color: #802013; }
 
 /* Alert Boxes */
-.bg-alert-amber { background-color: #fffbeb; color: #78350f; border-color: #fef3c7; }
-.dark .bg-alert-amber { background-color: #381e0b; color: #fde68a; border-color: #78350f; }
+.bg-alert-amber { background-color: #fdfaf2; color: #6b5c3a; border-color: #e8e3d3; } 
+.dark .bg-alert-amber { background-color: #262217; color: #e8e3d3; border-color: #85754d; } 
 
-.bg-alert-blue { background-color: #eff6ff; color: #1e3a8a; border-color: #dbeafe; }
-.dark .bg-alert-blue { background-color: #172554; color: #dbeafe; border-color: #1e3a8a; }
+.bg-alert-blue { background-color: #f0f4f8; color: #2a4365; border-color: #e2e8f0; }
+.dark .bg-alert-blue { background-color: #1a202c; color: #bee3f8; border-color: #2a4365; }
