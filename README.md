@@ -1,7 +1,7 @@
 # UWTimeSchd 
 *AKA The Barchive*
 
-A serverless, static web application and automated data pipeline for scraping, parsing, and searching the [UW Time Schedule Archives](https://www.washington.edu/students/timeschd/). 
+A serverless, static web application and automated data pipeline for scraping, parsing, and searching the [UW Time Schedule Archives](https://www.washington.edu/students/timeschd/archive/). 
 
 **[View the live website here!](https://flyingfaller.github.io/uwtimeschd/)**
 
