@@ -15,7 +15,7 @@
   "targets": {
     "start_term"   : ["WIN", 2004],
     "end_term"     : null,
-    "target_majors": ["aa", "meche", "cse", "appmath"]
+    "target_majors": ["aa", "meche", "cse", "appmath", "ee"]
   },
   "chunking": {
     "chunk_size_mb": 50
