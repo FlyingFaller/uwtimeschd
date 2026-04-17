@@ -1,7 +1,7 @@
 {
   "serverMode": "chunked",
   "requestChunkSize": 4096,
-  "databaseLengthBytes": 21721088,
+  "databaseLengthBytes": 26992640,
   "serverChunkSize": 52428800,
   "chunks": [
     "schedules.db.00"
