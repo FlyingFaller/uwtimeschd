@@ -36,7 +36,7 @@ jobs:
             
       - name: Install dependencies
         if: ${{ !inputs.skip_update }}
-        run: uv sync
+        run: uv sync --no-dev
 
       - name: Run update pipeline
         if: ${{ !inputs.skip_update }}
