@@ -1,11 +1,17 @@
 [project]
 name = "uwtimeschd"
 version = "0.1.0"
-description = "Add your description here"
+description = "UW Time Schedule Archive search tool."
 readme = "README.md"
+license-files = ["LICEN[CS]E.*"]
+license = "MIT"
 requires-python = ">=3.13"
 dependencies = [
     "beautifulsoup4>=4.14.3",
-    "rangehttpserver>=1.4.0",
     "requests>=2.33.0",
+]
+
+[dependency-groups]
+dev = [
+    "rangehttpserver>=1.4.0",
 ]
