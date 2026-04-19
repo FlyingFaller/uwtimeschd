@@ -10,7 +10,7 @@ CREATE_MAJORS_TABLE = """
         course_prefix TEXT PRIMARY KEY,
         major_name    TEXT,
         major_code    TEXT
-    ) WITHOUT ROWID;
+    );
 """
 
 # --- THE SIEVE (SEARCH INDEX) ---
@@ -37,7 +37,7 @@ CREATE_DISCOVERY_TABLE = """
         attributes_mask INTEGER,
         
         PRIMARY KEY (course_prefix, course_number, term_code, section_id, meeting_index)
-    ) WITHOUT ROWID;
+    );
 """
 
 # --- THE OMNI-SEARCH INDEX (FTS5) ---
@@ -65,7 +65,7 @@ CREATE_COURSES_TABLE = """
         gen_ed_reqs       TEXT,
         has_prerequisites BOOLEAN,
         notes             TEXT
-    ) WITHOUT ROWID;
+    );
 """
 
 CREATE_SECTIONS_TABLE = """
@@ -101,7 +101,7 @@ CREATE_SECTIONS_TABLE = """
         no_financial_aid        BOOLEAN,
         
         FOREIGN KEY(course_id) REFERENCES courses(course_id) ON DELETE CASCADE
-    ) WITHOUT ROWID;
+    );
 """
 
 CREATE_MEETINGS_TABLE = """
