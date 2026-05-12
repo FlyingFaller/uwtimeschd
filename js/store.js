@@ -29,10 +29,10 @@ export class AppStore {
 
         this.state = {
             isExpanded   : false,
-            currentAllIds: [],
             currentOffset: 0,
             isLoadingMore: false,
-            totalMatches : 0
+            totalMatches : 0,
+            observer     : null
         };
     }
 

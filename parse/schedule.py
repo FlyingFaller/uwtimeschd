@@ -163,7 +163,7 @@ def extract_credits(chunk: str) -> str:
 
 def extract_times(chunk: str) -> str:
     # The Gap Anchor replaces the strict `^` anchor
-    match = re.search(r'(?:^|\s+)(to be arranged|TBA|[a-zA-Z]+\s+\d{1,4}[-:]\d{1,4})', chunk)
+    match = re.search(r'(?:^|\s+)(to be arranged|TBA|[a-zA-Z]+\s+\d{1,4}[-:]\d{1,4}[Pp]?)', chunk)
     return match.group(1) if match else ""
 
 def extract_building_room(chunk: str) -> str:

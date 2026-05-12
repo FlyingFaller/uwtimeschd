@@ -1,4 +1,4 @@
-import { TAG_CONFIG, TYPE_TITLES } from './constants.js';
+import { TAG_CONFIG, TYPE_TITLES, TYPE_COLORS } from './constants.js';
 import { getQuarterColorClasses } from './utils.js';
 
 export class UIManager {
@@ -52,9 +52,24 @@ export class UIManager {
         if (window.lucide) lucide.createIcons();
     }
 
-    renderErrorState() {
+    renderErrorState(error, queryContext) {
         if (this.container) {
-            this.container.innerHTML = `<div class="text-theme-status-err p-8 text-center font-bold">Query Error Occurred.</div>`;
+            const errorMsg = error?.message || error || "Unknown Error";
+            this.container.innerHTML = `
+                <div class="p-8">
+                    <div class="bg-red-50 dark:bg-red-900/10 border border-red-200 dark:border-red-800 rounded-lg p-6 text-left font-mono text-sm overflow-auto">
+                        <div class="font-bold text-red-600 dark:text-red-400 mb-3 flex items-center gap-2">
+                            <i data-lucide="alert-triangle" class="w-5 h-5"></i> Query Error Occurred
+                        </div>
+                        <div class="mb-4 text-theme-text-main whitespace-pre-wrap">${errorMsg}</div>
+                        ${queryContext ? `
+                        <div class="font-bold text-theme-text-muted mb-2">Active Filters:</div>
+                        <pre class="text-xs text-theme-text-muted whitespace-pre-wrap bg-theme-surface p-3 rounded border border-theme-border">${queryContext}</pre>
+                        ` : ''}
+                    </div>
+                </div>
+            `;
+            if (window.lucide) lucide.createIcons();
         }
     }
 
@@ -66,11 +81,11 @@ export class UIManager {
         let html = '';
         const detailBaseClass = "inline-block px-1.5 py-0.5 border rounded text-[9px] font-bold uppercase tracking-wider cursor-help";
         
-        if (sec.crnc) html += `<span class="${detailBaseClass} tag-slate" title="Credit / No Credit Only">CR/NC</span>`;
+        if (sec.is_credit_no_credit) html += `<span class="${detailBaseClass} tag-slate" title="Credit / No Credit Only">CR/NC</span>`;
         if (sec.fee) html += `<span class="${detailBaseClass} tag-green" title="Extra Course Fee">Fee: $${sec.fee}</span>`;
         
-        if (sec.other && sec.other.length > 0) {
-            sec.other.forEach(code => {
+        if (sec.ui_badges && sec.ui_badges.length > 0) {
+            sec.ui_badges.forEach(code => {
                 const config = TAG_CONFIG[code] || { label: code, tooltip: "", styles: "tag-slate" };
                 html += `<span class="${detailBaseClass} ${config.styles}" title="${config.tooltip}">${config.label}</span>`;
             });
@@ -79,43 +94,42 @@ export class UIManager {
     }
 
     _createSectionRow(sec) {
-        const isPrimary = sec.isPrimary;
-        const typeColor = sec.type === 'LC' ? 'tag-blue' : (sec.type === 'QZ' ? 'tag-orange' : (sec.type === 'IS' ? 'tag-purple' : 'tag-slate'));
-        const typeTooltip = TYPE_TITLES[sec.type] || sec.type;
+        const isPrimary = sec.is_primary;
         
-        // Use our isolated primary-row colors
+        const typeColor = TYPE_COLORS[sec.section_type] || TYPE_COLORS.default;
+        const typeTooltip = TYPE_TITLES[sec.section_type] || sec.section_type || 'N/A';
+        
         const rowBgClass = isPrimary ? 'bg-theme-row-primary hover:bg-theme-row-primary-hover' : 'bg-theme-surface hover:bg-theme-surface-hover';
         
         const textClass = isPrimary ? 'text-theme-text-main font-bold' : 'text-theme-text-muted font-medium';
         const baseTdClass = `py-2.5 px-2 text-[11px] align-middle ${textClass}`;
         const tabularTdClass = `${baseTdClass} tabular-nums`;
 
-        // We ALWAYS apply the bottom border now to separate the row from its notes.
         const borderClass = isPrimary ? 'border-theme-border' : 'border-theme-surface-alt';
         const rowBorderToggle = `border-b ${borderClass}`;
 
-        const daysHtml = `<div class="space-y-1">${sec.meetings.map(m => `<div>${m.days}</div>`).join('')}</div>`;
-        const timeHtml = `<div class="space-y-1">${sec.meetings.map(m => `<div>${m.time}</div>`).join('')}</div>`;
-        const bldgHtml = `<div class="space-y-1">${sec.meetings.map(m => `<div>${m.bldg}</div>`).join('')}</div>`;
-        const instHtml = `<div class="space-y-1">${sec.meetings.map(m => `<div class="truncate max-w-[130px]" title="${m.instructor}">${m.instructor}</div>`).join('')}</div>`;
+        const daysHtml = `<div class="space-y-1">${sec.meetings.map(m => `<div>${m.ui_days}</div>`).join('')}</div>`;
+        const timeHtml = `<div class="space-y-1">${sec.meetings.map(m => `<div>${m.ui_time}</div>`).join('')}</div>`;
+        const bldgHtml = `<div class="space-y-1">${sec.meetings.map(m => `<div>${m.building_room || ''}</div>`).join('')}</div>`;
+        const instHtml = `<div class="space-y-1">${sec.meetings.map(m => `<div class="truncate max-w-[130px]" title="${m.instructor || ''}">${m.instructor || ''}</div>`).join('')}</div>`;
 
         let rowHtml = `
             <tr class="${rowBorderToggle} ${rowBgClass} transition-colors">
                 <td class="py-2.5 px-3 text-xs whitespace-nowrap align-middle">
-                    <span class="${textClass} tabular-nums">${sec.sln}</span>
-                    <span class="${textClass} tabular-nums ml-1.5">${sec.id}</span>
-                    ${sec.restr ? `<span class="inline-flex items-center cursor-help ml-1" title="Restricted: Check course requirements"><i data-lucide="lock" class="w-3 h-3 text-theme-status-err opacity-80"></i></span>` : ''}
-                    ${sec.addCode ? `<span class="inline-flex items-center cursor-help ml-0.5" title="Add Code Required"><i data-lucide="key" class="w-3 h-3 text-theme-status-wait opacity-80"></i></span>` : ''}
+                    <span class="${textClass} tabular-nums">${sec.SLN || 'N/A'}</span>
+                    <span class="${textClass} tabular-nums ml-1.5">${sec.ui_short_id}</span>
+                    ${sec.restrictions?.restricted_registration ? `<span class="inline-flex items-center cursor-help ml-1" title="Restricted: Check course requirements"><i data-lucide="lock" class="w-3 h-3 text-theme-status-err opacity-80"></i></span>` : ''}
+                    ${sec.restrictions?.add_code_required ? `<span class="inline-flex items-center cursor-help ml-0.5" title="Add Code Required"><i data-lucide="key" class="w-3 h-3 text-theme-status-wait opacity-80"></i></span>` : ''}
                 </td>
                 <td class="py-2.5 px-2 align-middle">
-                    <span class="px-1.5 py-0.5 border rounded text-[10px] font-bold ${typeColor} cursor-help" title="${typeTooltip}">${sec.type}</span>
+                    <span class="px-1.5 py-0.5 border rounded text-[10px] font-bold ${typeColor} cursor-help" title="${typeTooltip}">${sec.section_type || 'N/A'}</span>
                 </td>
-                <td class="${tabularTdClass}">${sec.cred}</td>
+                <td class="${tabularTdClass}">${sec.ui_credits}</td>
                 <td class="${baseTdClass} whitespace-nowrap">${daysHtml}</td>
                 <td class="${baseTdClass} whitespace-nowrap">${timeHtml}</td>
                 <td class="${baseTdClass} whitespace-nowrap">${bldgHtml}</td>
                 <td class="${baseTdClass}">${instHtml}</td>
-                <td class="${tabularTdClass}">${sec.enrl} / ${sec.limit}</td>
+                <td class="${tabularTdClass}">${sec.enrolled !== null ? sec.enrolled : '-'} / ${sec.enrollment_limit !== null ? sec.enrollment_limit : '-'}</td>
                 <td class="py-2 px-2 align-middle">
                     <div class="flex flex-wrap gap-1">
                         ${this._createDetailsHtml(sec)}
@@ -139,16 +153,20 @@ export class UIManager {
         return rowHtml;
     }
 
-_createCourseCard(course, majorLookup = {}) {
+    _createCourseCard(course, prefixToMajorCode = {}) {
         const sectionRowsHtml = course.sections.map(sec => this._createSectionRow(sec)).join('');
-        const qColor = getQuarterColorClasses(course.quarter);
+        
+        // Rebuilt the term string using the decoded values mapped in service.js
+        const formattedQuarter = `${course.ui_quarter} ${course.ui_year}`;
+        const qColor = getQuarterColorClasses(formattedQuarter);
 
-        const code = majorLookup[course.prefix] || course.prefix; 
+        // Uses our new 1:1 prefix -> slug map!
+        const code = prefixToMajorCode[course.course_prefix] || course.course_prefix; 
         const slug = code.replace(/\s+/g, '').toLowerCase(); 
-        const anchor = `${course.prefix.replace(/\s+/g, '').toLowerCase()}${course.number}`;
+        const anchor = `${course.course_prefix.replace(/\s+/g, '').toLowerCase()}${course.course_number}`;
         const courseLink = `https://www.washington.edu/students/crscat/${slug}.html#${anchor}`;
 
-        const hasReqs = course.hasPrereqs || course.genEd.length > 0;
+        const hasReqs = course.has_prerequisites || (course.gen_ed_reqs && course.gen_ed_reqs.length > 0);
 
         return `
             <details class="course-card group/card bg-theme-surface border border-theme-border rounded-lg shadow-sm overflow-hidden mb-4">
@@ -158,15 +176,15 @@ _createCourseCard(course, majorLookup = {}) {
                     <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
                         <a href="${courseLink}" target="_blank" rel="noopener noreferrer" class="flex items-center gap-3 group/link" onclick="event.stopPropagation()">
                             <h2 class="text-lg font-extrabold text-theme-text-main tracking-tight flex items-center gap-2 transition-colors group-hover/link:text-theme-accent-main">
-                                ${course.prefix} ${course.number}
+                                ${course.course_prefix} ${course.course_number}
                             </h2>
                             <h3 class="text-[15px] text-theme-text-muted font-medium transition-colors group-hover/link:text-theme-accent-hover">
-                                ${course.title}
+                                ${course.course_title || "Unknown Title"}
                             </h3>
                         </a>
 
                         <div class="flex items-center justify-between md:justify-end w-full md:w-auto gap-4 shrink-0">
-                            <span class="px-3 py-1 rounded-md border text-xs font-bold uppercase tracking-wider shadow-sm ${qColor}">${course.quarter}</span>
+                            <span class="px-3 py-1 rounded-md border text-xs font-bold uppercase tracking-wider shadow-sm ${qColor}">${formattedQuarter}</span>
                             <div class="text-theme-text-muted group-open/card:rotate-180 transition-transform duration-200 shrink-0 bg-theme-surface border border-theme-border rounded p-1 shadow-sm group-hover/summary:bg-theme-surface-alt [details:has(thead:hover)_&]:bg-theme-surface-alt">
                                 <i data-lucide="chevron-down" class="w-4 h-4"></i>
                             </div>
@@ -175,12 +193,12 @@ _createCourseCard(course, majorLookup = {}) {
 
                     ${(hasReqs || course.notes) ? `
                         <div class="hidden group-open/card:flex flex-wrap items-center gap-x-2 gap-y-1.5 mt-2">
-                            ${course.hasPrereqs ? `
+                            ${course.has_prerequisites ? `
                                 <span class="inline-flex items-center gap-1 px-1.5 py-0.5 border rounded text-[10px] font-bold uppercase tracking-wider tag-red" title="Prerequisites Required">
                                     <i data-lucide="alert-circle" class="w-3 h-3"></i> PREREQS
                                 </span>
                             ` : ''}
-                            ${course.genEd.map(req => `
+                            ${course.gen_ed_reqs.map(req => `
                                 <span class="inline-flex items-center px-1.5 py-0.5 border rounded text-[10px] font-bold tracking-wider tag-indigo" title="General Education Requirement">
                                     ${req}
                                 </span>
@@ -222,7 +240,7 @@ _createCourseCard(course, majorLookup = {}) {
         `;
     }
 
-    renderCourses(courses, totalMatches, append = false, majorLookup = {}) {
+    renderCourses(courses, totalMatches, append = false, prefixToMajorCode = {}) {
         if (this.resultCount && totalMatches !== undefined) {
             this.resultCount.innerText = totalMatches;
         }
@@ -238,7 +256,7 @@ _createCourseCard(course, majorLookup = {}) {
             return;
         }
 
-        const html = courses.map(course => this._createCourseCard(course, majorLookup)).join('');
+        const html = courses.map(course => this._createCourseCard(course, prefixToMajorCode)).join('');
 
         if (append) {
             const oldSentinel = document.getElementById('scroll-sentinel');

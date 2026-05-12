@@ -1,0 +1,37 @@
+{
+    "aa": {
+        "major_name": "AERONAUTICS & ASTRONAUTICS",
+        "college": "COLLEGE OF ENGINEERING",
+        "prefixes": {
+            "A A": 2073
+        }
+    },
+    "appmath": {
+        "major_name": "APPLIED MATHEMATICS",
+        "college": "COLLEGE OF ARTS & SCIENCES",
+        "prefixes": {
+            "AMATH": 1630
+        }
+    },
+    "cse": {
+        "major_name": "COMPUTER SCIENCE & ENGINEERING",
+        "college": "COLLEGE OF ENGINEERING",
+        "prefixes": {
+            "CSE": 3906
+        }
+    },
+    "ee": {
+        "major_name": "ELECTRICAL ENGINEERING",
+        "college": "COLLEGE OF ENGINEERING",
+        "prefixes": {
+            "E E": 3564
+        }
+    },
+    "meche": {
+        "major_name": "MECHANICAL ENGINEERING",
+        "college": "COLLEGE OF ENGINEERING",
+        "prefixes": {
+            "M E": 2763
+        }
+    }
+}

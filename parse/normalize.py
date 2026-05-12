@@ -231,34 +231,72 @@ def clean_time(val: str) -> dict:
         res['is_tba'] = True
         return res
         
-    # Example input: "MWF    1130-1220" or "Th    130-320"
-    match = re.search(r'([A-Za-z]+)\s+(\d{1,4})[-:](\d{1,4})', v)
+    # Added ([Pp]?) to the end to capture the PM flag
+    match = re.search(r'([A-Za-z]+)\s+(\d{1,4})[-:](\d{1,4})([Pp]?)', v)
     if not match:
         return res
         
     days_str  = match.group(1)
     start_str = match.group(2)
     end_str   = match.group(3)
+    has_p     = bool(match.group(4))
     
-    # Parse days using regex to handle 'Th' and 'Su' correctly without overlapping 'T' or 'S'
     res['days'] = re.findall(r'Th|Su|M|T|W|F|S', days_str)
     
-    res['start_time'] = format_military_time(start_str)
-    res['end_time']   = format_military_time(end_str)
+    # Pass them together so we can do chronological checks
+    res['start_time'], res['end_time'] = resolve_time_block(start_str, end_str, has_p)
     
     return res
 
-def format_military_time(time_str: str) -> str | None:
-    """Converts a sloppy UW time like '130' or '1130' into 24-hour '13:30' format."""
-    if len(time_str) < 3: return None
-    
-    hour = int(time_str[:-2])
-    minute = time_str[-2:]
-    
-    # The UW Magic Rule: If the hour is 1 through 6, it is mathematically guaranteed to be PM.
-    # We add 12 to convert it to 24-hour time.
-    if 1 <= hour <= 6:
-        hour += 12
+def resolve_time_block(start_str: str, end_str: str, has_p: bool) -> tuple[str | None, str | None]:
+    if len(start_str) < 3 or len(end_str) < 3: 
+        return None, None
         
-    # Format with leading zero for neatness
-    return f"{hour:02d}:{minute}"
+    start_val = int(start_str)
+    start_h = int(start_str[:-2])
+    start_m = int(start_str[-2:])
+    
+    end_h = int(end_str[:-2])
+    end_m = int(end_str[-2:])
+    
+    # 1. Anchor the Start Time using the 4:30 Boundary Zone Logic
+    if has_p:
+        # Evening Zone: Guaranteed to be >= 4:30 PM
+        start_is_pm = True
+    else:
+        # No 'P': The class starts before 4:30 PM.
+        # If the integer value falls in the Dead Zone (1:00 to 4:29 AM) 
+        # or the 12:xx hour (12:00 to 12:59 AM), it MUST be the afternoon PM variant.
+        if (100 <= start_val <= 429) or (1200 <= start_val <= 1259):
+            start_is_pm = True
+        else:
+            # Morning Zone: 430 to 1159 (4:30 AM to 11:59 AM)
+            start_is_pm = False
+            
+    # Standardize 12 to 0 for easier 24h math
+    if start_h == 12: 
+        start_h = 0
+    if start_is_pm:
+        start_h += 12
+        
+    # 2. Determine the End Time chronologically
+    end_h_am = 0 if end_h == 12 else end_h
+    end_h_pm = end_h_am + 12
+    
+    start_total_mins = start_h * 60 + start_m
+    end_am_mins = end_h_am * 60 + end_m
+    end_pm_mins = end_h_pm * 60 + end_m
+    
+    # This duration checker inherently allows ending in the Dead Zone
+    def get_duration(end_mins):
+        if end_mins <= start_total_mins:
+            # Handles wrapping past midnight into the dead zone
+            return (end_mins + 1440) - start_total_mins
+        return end_mins - start_total_mins
+        
+    dur_am = get_duration(end_am_mins)
+    dur_pm = get_duration(end_pm_mins)
+    
+    final_end_h = end_h_am if dur_am < dur_pm else end_h_pm
+        
+    return f"{start_h:02d}:{start_m:02d}", f"{final_end_h:02d}:{end_m:02d}"

@@ -1,92 +1,56 @@
-import { formatTime } from './utils.js';
+import { PARQUET_ATTR_TO_CODE, REVERSE_QUARTER_MAP } from './constants.js';
 
 export class CourseService {
     /**
-     * Transforms flat SQL rows into the nested Map structure required by the UI.
+     * Unseals Apache Arrow Proxies and derives stripped term_code variables
      */
     static shapeDataForUI(rows) {
-        const coursesMap = new Map();
+        return rows.map(row => {
+            const course = { ...row }; 
 
-        for (const row of rows) {
-            this._processCourseRow(coursesMap, row);
-            if (row.section_id) this._processSectionRow(coursesMap, row);
-            if (row.meeting_id) this._processMeetingRow(coursesMap, row);
-        }
+            // Decode the combined term_code directly
+            const termCode = Number(course.term_code);
+            course.ui_year = Math.floor(termCode / 10);
+            course.ui_quarter = REVERSE_QUARTER_MAP[termCode % 10] || 'UNK';
 
-        // Convert Maps back to cleanly nested arrays for UI iteration
-        return Array.from(coursesMap.values()).map(c => ({
-            ...c,
-            sections: Array.from(c.sectionsMap.values()).map(s => ({
-                ...s,
-                meetings: Array.from(s.meetingsMap.values())
-            }))
-        }));
-    }
+            course.gen_ed_reqs = course.gen_ed_reqs ? [...course.gen_ed_reqs] : [];
+            const rawSections = course.sections ? [...course.sections] : [];
 
-    static _processCourseRow(coursesMap, row) {
-        if (!coursesMap.has(row.course_id)) {
-            coursesMap.set(row.course_id, {
-                prefix     : row.course_prefix,
-                number     : row.course_number,
-                title      : row.course_title || "Unknown Title",
-                quarter    : `${row.quarter} ${row.year}`,
-                notes      : row.course_notes,
-                hasPrereqs : row.has_prerequisites === 1,
-                genEd      : row.gen_ed_reqs ? row.gen_ed_reqs.split('/') : [],
-                sectionsMap: new Map()
+            course.sections = rawSections.map(sec => {
+                const s = { ...sec }; 
+                s.restrictions = s.restrictions ? { ...s.restrictions } : {};
+                s.attributes = s.attributes ? { ...s.attributes } : {};
+                
+                const badges = [];
+                for (const [attrKey, code] of Object.entries(PARQUET_ATTR_TO_CODE)) {
+                    if (s.attributes[attrKey]) badges.push(code);
+                }
+                s.ui_badges = badges;
+
+                s.ui_short_id = s.section_id.split('-').pop();
+                s.ui_credits = s.credits_min !== null 
+                    ? (s.credits_min === s.credits_max ? `${s.credits_min}` : `${s.credits_min}-${s.credits_max}`) 
+                    : "";
+
+                const rawMeetings = s.meetings ? [...s.meetings] : [];
+                s.meetings = rawMeetings.map(mtg => {
+                    const m = { ...mtg };
+                    m.time = m.time ? { ...m.time } : {};
+                    m.time.days = m.time.days ? [...m.time.days] : [];
+                    
+                    const start = m.time.start_time || '';
+                    const end = m.time.end_time || '';
+                    
+                    m.ui_days = m.time.days.join('');
+                    m.ui_time = (start && end) ? `${start}-${end}` : (start || '');
+                    
+                    return m;
+                });
+
+                return s;
             });
-        }
-    }
 
-    static _processSectionRow(coursesMap, row) {
-        const course = coursesMap.get(row.course_id);
-        if (!course.sectionsMap.has(row.section_id)) {
-            const credStr = row.credits_min !== null 
-                ? (row.credits_min === row.credits_max ? `${row.credits_min}` : `${row.credits_min}-${row.credits_max}`) 
-                : "";
-
-            const otherArgs = [];
-            const flagMap = {
-                writing   : 'W', honors           : 'H', jointly_offered : 'J', online  : 'O', asynchronous: 'A',
-                hybrid    : 'B', community_engaged: 'E', service_learning: 'S', research: 'R',
-                new_course: '%', no_financial_aid : '#'
-            };
-            
-            for (const [key, flag] of Object.entries(flagMap)) {
-                if (row[key] === 1) otherArgs.push(flag);
-            }
-
-            course.sectionsMap.set(row.section_id, {
-                sln        : row.sln ? row.sln.toString()                        : 'N/A',
-                id         : row.section_id.split('-').pop(),
-                isPrimary  : row.is_primary === 1,
-                type       : row.section_type || 'N/A',
-                cred       : credStr,
-                enrl       : row.enrolled !== null ? row.enrolled                : '-',
-                limit      : row.enrollment_limit !== null ? row.enrollment_limit: '-',
-                notes      : row.section_notes,
-                restr      : row.restricted_registration === 1,
-                addCode    : row.add_code_required === 1,
-                crnc       : row.is_credit_no_credit === 1,
-                fee        : row.fee,
-                other      : otherArgs,
-                meetingsMap: new Map()
-            });
-        }
-    }
-
-    static _processMeetingRow(coursesMap, row) {
-        const section = coursesMap.get(row.course_id).sectionsMap.get(row.section_id);
-        if (!section.meetingsMap.has(row.meeting_id)) {
-            const start = formatTime(row.start_time);
-            const end   = formatTime(row.end_time);
-            
-            section.meetingsMap.set(row.meeting_id, {
-                days      : row.days || '',
-                time      : (start && end) ? `${start}-${end}`: (start || ''),
-                bldg      : row.building_room || '',
-                instructor: row.instructor || ''
-            });
-        }
+            return course;
+        });
     }
 }
