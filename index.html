@@ -15,9 +15,7 @@
             
             // --- CONFIGURATION ---
             // Set to 'dark', 'light', or 'system'
-            const defaultTheme = 'system'; 
-            // const defaultTheme = 'light'
-            // ---------------------
+            const defaultTheme = 'light'; 
             
             if (defaultTheme === 'dark') {
                 root.classList.replace('light', 'dark');
@@ -54,7 +52,6 @@
                                 bg   : 'var(--accent-bg)',
                                 text : 'var(--accent-text)',
                             },
-                            // New dedicated colors for the table rows
                             row: {
                                 primary: 'var(--row-primary)',
                                 'primary-hover': 'var(--row-primary-hover)',
@@ -77,7 +74,6 @@
     <!-- LEFT SIDEBAR: CONTROL PANEL -->
     <aside class="w-80 bg-theme-surface border-r border-theme-border flex flex-col h-full shadow-lg z-20 shrink-0">
         <!-- Logo / Header with Dark Mode Toggle -->
-        <!-- <div class="p-4 border-b border-theme-border bg-theme-surface-hover flex items-center justify-between shrink-0"> -->
         <div class="px-4 h-[74px] border-b border-theme-border bg-theme-surface-hover flex items-center justify-between shrink-0">
             <div class="flex items-center gap-3">
                 <a href="https://github.com/FlyingFaller/uwtimeschd" target="_blank" rel="noopener noreferrer" class="bg-theme-accent-main text-theme-surface-hover hover:opacity-90 p-2 rounded flex items-center justify-center shadow-sm transition-opacity cursor-pointer" title="View Source on GitHub">
@@ -331,7 +327,6 @@
         <header class="bg-theme-surface border-b border-theme-border shadow-sm z-10 shrink-0 flex flex-col">
             
             <!-- Tier 1: Search Bar -->
-            <!-- <div class="p-4 flex gap-3 w-full"> -->
             <div class="px-4 h-[74px] border-b border-theme-border flex items-center gap-3 w-full">
                 <div class="relative flex-1">
                     <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
@@ -351,7 +346,6 @@
             </div>
 
             <!-- Tier 2: Utility Bar -->
-            <!-- <div class="bg-theme-surface-hover border-t border-theme-border px-4 py-2"> -->
             <div class="bg-theme-surface-hover px-4 py-2">
                 <div class="flex items-center justify-between w-full">
                     
@@ -362,7 +356,12 @@
                         <div class="h-4 w-px bg-theme-border"></div>
                         <label for="load-all-toggle" class="flex items-center gap-1.5 cursor-pointer group">
                             <input type="checkbox" id="load-all-toggle" class="cursor-pointer rounded border-theme-border accent-theme-accent-main text-theme-accent-main focus:ring-theme-accent-main w-3.5 h-3.5 bg-theme-surface">
-                            <span class="text-[11px] font-bold text-theme-text-muted group-hover:text-theme-text-main select-none tracking-wider uppercase transition-colors">Load All Data</span>
+                            <span class="text-[11px] font-bold text-theme-text-muted group-hover:text-theme-text-main select-none tracking-wider uppercase transition-colors" title="Disables load-on-scroll. May temporarily stall the page!">Load All Data</span>
+                        </label>
+                        <div class="h-4 w-px bg-theme-border"></div>
+                        <label for="unified-mode-toggle" class="flex items-center gap-1.5 cursor-pointer group">
+                            <input type="checkbox" id="unified-mode-toggle" class="cursor-pointer rounded border-theme-border accent-theme-accent-main text-theme-accent-main focus:ring-theme-accent-main w-3.5 h-3.5 bg-theme-surface">
+                            <span class="text-[11px] font-bold text-theme-text-muted group-hover:text-theme-text-main select-none tracking-wider uppercase transition-colors" title="Group results by unique course instead of term offering">Unified Mode</span>
                         </label>
                     </div>
 

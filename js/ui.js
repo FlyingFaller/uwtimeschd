@@ -156,11 +156,9 @@ export class UIManager {
     _createCourseCard(course, prefixToMajorCode = {}) {
         const sectionRowsHtml = course.sections.map(sec => this._createSectionRow(sec)).join('');
         
-        // Rebuilt the term string using the decoded values mapped in service.js
         const formattedQuarter = `${course.ui_quarter} ${course.ui_year}`;
         const qColor = getQuarterColorClasses(formattedQuarter);
 
-        // Uses our new 1:1 prefix -> slug map!
         const code = prefixToMajorCode[course.course_prefix] || course.course_prefix; 
         const slug = code.replace(/\s+/g, '').toLowerCase(); 
         const anchor = `${course.course_prefix.replace(/\s+/g, '').toLowerCase()}${course.course_number}`;
@@ -240,7 +238,112 @@ export class UIManager {
         `;
     }
 
-    renderCourses(courses, totalMatches, append = false, prefixToMajorCode = {}) {
+    _createUnifiedCourseCard(course, prefixToMajorCode = {}) {
+        const code = prefixToMajorCode[course.course_prefix] || course.course_prefix; 
+        const slug = code.replace(/\s+/g, '').toLowerCase(); 
+        const anchor = `${course.course_prefix.replace(/\s+/g, '').toLowerCase()}${course.course_number}`;
+        const courseLink = `https://www.washington.edu/students/crscat/${slug}.html#${anchor}`;
+        const hasReqs = course.has_prerequisites || (course.gen_ed_reqs && course.gen_ed_reqs.length > 0);
+
+        // Generate the term switcher buttons 
+        const termButtonsHtml = course.terms.map((term, index) => {
+            const qColor = getQuarterColorClasses(term.formatted_quarter);
+            // First button is active by default. Removed ring-offset classes to make it flush.
+            const activeClasses = `ring-2 ring-current font-extrabold shadow-sm`;
+            const inactiveClasses = `opacity-50 hover:opacity-80 font-medium`;
+            const stateClasses = index === 0 ? activeClasses : inactiveClasses;
+            
+            return `
+                <button class="unified-term-btn shrink-0 whitespace-nowrap px-3 py-1 rounded border text-xs tracking-wider transition-all ${qColor} ${stateClasses}" data-term-index="${index}" data-qcolor="${qColor}">
+                    ${term.formatted_quarter}
+                </button>
+            `;
+        }).join('');
+
+        // The default active term to display in the right-hand badge
+        const defaultTermText = course.terms[0].formatted_quarter;
+        const defaultTermColor = getQuarterColorClasses(defaultTermText);
+
+        // Generate multiple tbodys, hiding all but the first
+        const tbodysHtml = course.terms.map((term, index) => {
+            const sectionRowsHtml = term.sections.map(sec => this._createSectionRow(sec)).join('');
+            const hiddenClass = index === 0 ? '' : 'hidden';
+            return `
+                <tbody class="term-tbody ${hiddenClass}" data-term-content="${index}">
+                    ${sectionRowsHtml}
+                </tbody>
+            `;
+        }).join('');
+
+        return `
+            <details class="course-card group/card bg-theme-surface border border-theme-border rounded-lg shadow-sm overflow-hidden mb-4">
+                <summary class="cursor-pointer px-4 pt-4 pb-4 group-open/card:pb-1.5 border-b border-theme-border group-open/card:border-b-0 bg-theme-surface hover:bg-theme-surface-hover [details:has(thead:hover)_&]:bg-theme-surface-hover transition-colors group/summary">
+                    <div class="flex flex-col gap-3 w-full">
+                        
+                        <!-- Title Row -->
+                        <div class="flex items-start justify-between gap-4">
+                            
+                            <!-- Link Wrapper absorbs the flex space to restrict the clickable area -->
+                            <div class="flex-1 min-w-0 flex items-center">
+                                <a href="${courseLink}" target="_blank" rel="noopener noreferrer" class="flex items-center gap-3 group/link w-fit max-w-full" onclick="event.stopPropagation()">
+                                    <h2 class="text-lg font-extrabold text-theme-text-main tracking-tight flex items-center gap-2 transition-colors group-hover/link:text-theme-accent-main shrink-0">
+                                        ${course.course_prefix} ${course.course_number}
+                                    </h2>
+                                    <h3 class="text-[15px] text-theme-text-muted font-medium transition-colors group-hover/link:text-theme-accent-hover truncate">
+                                        ${course.course_title || "Unknown Title"}
+                                    </h3>
+                                </a>
+                            </div>
+                            
+                            <div class="flex items-center gap-4 shrink-0 mt-0.5">
+                                <span class="unified-active-term-badge px-3 py-1 rounded-md border text-xs font-bold uppercase tracking-wider shadow-sm ${defaultTermColor}">${defaultTermText}</span>
+                                <div class="text-theme-text-muted group-open/card:rotate-180 transition-transform duration-200 shrink-0 bg-theme-surface border border-theme-border rounded p-1 shadow-sm group-hover/summary:bg-theme-surface-alt [details:has(thead:hover)_&]:bg-theme-surface-alt">
+                                    <i data-lucide="chevron-down" class="w-4 h-4"></i>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Terms Row: Moved to its own full-width flex container -->
+                        <!-- pb-3 adds room for the scrollbar. px-1 allows the ring outline to render without clipping. -ml-1 realigns it flush left. -->
+                        <div class="flex overflow-x-auto gap-2 pb-3 pt-1 px-1 -ml-1 w-full">
+                            ${termButtonsHtml}
+                        </div>
+                    </div>
+
+                    ${(hasReqs || course.notes) ? `
+                        <div class="hidden group-open/card:flex flex-wrap items-center gap-x-2 gap-y-1.5 mt-2">
+                            ${course.has_prerequisites ? `<span class="inline-flex items-center gap-1 px-1.5 py-0.5 border rounded text-[10px] font-bold uppercase tracking-wider tag-red" title="Prerequisites Required"><i data-lucide="alert-circle" class="w-3 h-3"></i> PREREQS</span>` : ''}
+                            ${course.gen_ed_reqs.map(req => `<span class="inline-flex items-center px-1.5 py-0.5 border rounded text-[10px] font-bold tracking-wider tag-indigo" title="General Education Requirement">${req}</span>`).join('')}
+                            ${course.notes ? `<span class="flex items-center gap-1.5 text-[11px] text-theme-text-muted font-medium ml-1"><i data-lucide="info" class="w-3.5 h-3.5 opacity-70 shrink-0"></i><span class="leading-relaxed">${course.notes}</span></span>` : ''}
+                        </div>
+                    ` : ''}
+                </summary>
+                
+                <div class="bg-theme-surface">
+                    <div class="overflow-x-auto">
+                        <table class="w-full min-w-[900px] text-left border-collapse table-fixed">
+                            <thead class="bg-theme-surface hover:bg-theme-surface-hover [details:has(summary:hover)_&]:bg-theme-surface-hover transition-colors text-[10px] uppercase font-extrabold text-theme-text-muted tracking-wider border-b-2 border-theme-border">
+                                <tr>
+                                    <th class="py-2 px-3 border-none font-semibold whitespace-nowrap w-[12%] bg-transparent">SLN Sec Restr</th>
+                                    <th class="py-2 px-2 border-none font-semibold whitespace-nowrap w-[7%] bg-transparent">Type</th>
+                                    <th class="py-2 px-2 border-none font-semibold whitespace-nowrap w-[5%] bg-transparent">CR</th>
+                                    <th class="py-2 px-2 border-none font-semibold whitespace-nowrap w-[8%] bg-transparent">Days</th>
+                                    <th class="py-2 px-2 border-none font-semibold whitespace-nowrap w-[12%] bg-transparent">Time</th>
+                                    <th class="py-2 px-2 border-none font-semibold whitespace-nowrap w-[12%] bg-transparent">Bldg/Rm</th>
+                                    <th class="py-2 px-2 border-none font-semibold whitespace-nowrap w-[15%] bg-transparent">Instructor</th>
+                                    <th class="py-2 px-2 border-none font-semibold whitespace-nowrap w-[9%] bg-transparent">Enrl/Lim</th>
+                                    <th class="py-2 px-2 border-none font-semibold whitespace-nowrap w-auto bg-transparent">Details</th>
+                                </tr>
+                            </thead>
+                            ${tbodysHtml}
+                        </table>
+                    </div>
+                </div>
+            </details>
+        `;
+    }
+
+    renderCourses(courses, totalMatches, append = false, prefixToMajorCode = {}, isUnified = false) {
         if (this.resultCount && totalMatches !== undefined) {
             this.resultCount.innerText = totalMatches;
         }
@@ -256,7 +359,11 @@ export class UIManager {
             return;
         }
 
-        const html = courses.map(course => this._createCourseCard(course, prefixToMajorCode)).join('');
+        const html = courses.map(course => {
+            return isUnified 
+                ? this._createUnifiedCourseCard(course, prefixToMajorCode)
+                : this._createCourseCard(course, prefixToMajorCode);
+        }).join('');
 
         if (append) {
             const oldSentinel = document.getElementById('scroll-sentinel');

@@ -28,6 +28,8 @@ export class DatabaseManager {
 
             this.conn = await this.db.connect();
 
+            // Removed the problematic JSON extension autoloading
+
             // 1. Fetch the multi-file manifest
             const manifestUrl = new URL('manifest.json', window.location.href + this.parquetDir).toString();
             const manifestRes = await fetch(manifestUrl);
@@ -79,6 +81,8 @@ export class DatabaseManager {
         return `ORDER BY term_code DESC, course_prefix ASC, course_number ASC`;
     }
 
+    // --- STANDARD MODE METHODS ---
+
     async getTotalCount(filters, majorToPrefixes, signal) {
         if (!this.conn) throw new Error("Database not initialized");
         
@@ -105,5 +109,48 @@ export class DatabaseManager {
             const arrowResult = await this.conn.query(sql);
             return arrowResult.toArray();
         }, "Fetch Page");
+    }
+
+    // --- UNIFIED MODE METHODS ---
+
+    async getUnifiedTotalCount(filters, majorToPrefixes, signal) {
+        if (!this.conn) throw new Error("Database not initialized");
+        
+        return this._lockQuery(signal, async () => {
+            const whereClause = buildWhereClause(filters, majorToPrefixes);
+            // Count unique courses for accurate total pagination matches
+            const sql = `SELECT COUNT(DISTINCT course_prefix || course_number) as count FROM courses WHERE ${whereClause}`;
+            
+            const arrowResult = await this.conn.query(sql);
+            const rows = arrowResult.toArray();
+            return Number(rows[0].count); 
+        }, "Unified Count Aggregate");
+    }
+
+    async getUnifiedPage(filters, limit, offset, majorToPrefixes, signal) {
+        if (!this.conn) throw new Error("Database not initialized");
+        
+        return this._lockQuery(signal, async () => {
+            const whereClause = buildWhereClause(filters, majorToPrefixes);
+            // We translate the limit/offset into a DENSE_RANK window boundary
+            const rankFilter = limit === 'all' ? '' : `WHERE course_rank > ${offset} AND course_rank <= ${offset + limit}`;
+
+            // This returns FLAT rows cleanly without triggering the Arrow nested list bug!
+            const sql = `
+                WITH Filtered AS (
+                    SELECT * FROM courses WHERE ${whereClause}
+                ),
+                Ranked AS (
+                    SELECT *, DENSE_RANK() OVER (ORDER BY course_prefix ASC, course_number ASC) as course_rank
+                    FROM Filtered
+                )
+                SELECT * FROM Ranked
+                ${rankFilter}
+                ORDER BY course_rank ASC, term_code DESC
+            `;
+            
+            const arrowResult = await this.conn.query(sql);
+            return arrowResult.toArray();
+        }, "Fetch Unified Page");
     }
 }

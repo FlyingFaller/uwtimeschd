@@ -24,7 +24,8 @@ export class AppStore {
             startTime   : '',
             endTime     : '',
             sortBy      : 'newest',
-            loadAll     : false
+            loadAll     : false,
+            unifiedMode : false // Unified toggle state
         };
 
         this.state = {
