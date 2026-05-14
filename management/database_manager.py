@@ -2,6 +2,7 @@ import os
 import shutil
 import json
 import logging
+import glob
 from collections import Counter
 import pyarrow as pa
 import pyarrow.dataset as ds
@@ -57,7 +58,8 @@ class ScheduleDatabase:
         """Loads Parquet datasets and JSON registry into memory."""
         if os.path.exists(self.dataset_dir):
             try:
-                dataset = ds.dataset(self.dataset_dir, format="parquet")
+                parquet_files = glob.glob(f"{self.dataset_dir}/*.parquet")
+                dataset = ds.dataset(parquet_files, format="parquet")
                 self.courses = dataset.to_table().to_pylist()
             except Exception as e:
                 logger.error(f"Could not load dataset from {self.dataset_dir}: {e}")
@@ -112,7 +114,7 @@ class ScheduleDatabase:
     def save(self, max_rows_per_file: int = 450_000):
         """Writes the in-memory state back to disk and generates a manifest."""
         # Save Parquet
-        self.courses.sort(key=lambda x: (x['year'], x['quarter'], x['course_prefix'], x['course_number']), reverse=True)
+        self.courses.sort(key=lambda x: (x['term_code'], x['course_prefix'], x['course_number']), reverse=True)
         table = pa.Table.from_pylist(self.courses)
         
         os.makedirs(self.dataset_dir, exist_ok=True)

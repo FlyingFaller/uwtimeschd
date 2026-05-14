@@ -220,13 +220,8 @@ class App {
     }
 
     _toggleFilterButton(btn) {
-        if (btn.classList.toggle('active')) {
-            btn.classList.remove('border-theme-border', 'text-theme-text-main', 'bg-theme-surface', 'hover:bg-theme-surface-hover');
-            btn.classList.add('border-theme-accent-main', 'bg-theme-accent-bg', 'text-theme-accent-text');
-        } else {
-            btn.classList.add('border-theme-border', 'text-theme-text-main', 'bg-theme-surface', 'hover:bg-theme-surface-hover');
-            btn.classList.remove('border-theme-accent-main', 'bg-theme-accent-bg', 'text-theme-accent-text');
-        }
+        // Refactored to rely solely on the semantic CSS classes in theme.css
+        btn.classList.toggle('active');
     }
 
     _handleRadioToggleGroup(selector, activeBtn) {
@@ -291,10 +286,10 @@ class App {
         document.querySelectorAll('.type-checkbox').forEach(cb => cb.checked = false);
         document.querySelectorAll('.major-checkbox').forEach(cb => { cb.checked = cb.value === 'ALL'; });
 
+        // Cleaned up reset logic to match new CSS architecture
         document.querySelectorAll('.filter-btn, .filter-chip').forEach(t => {
             if (t.classList.contains('quarter-btn')) return;
-            t.classList.remove('active', 'border-theme-accent-main', 'bg-theme-accent-bg', 'text-theme-accent-text');
-            t.classList.add('border-theme-border', 'text-theme-text-main', 'bg-theme-surface', 'hover:bg-theme-surface-hover');
+            t.classList.remove('active');
         });
 
         document.querySelectorAll('.quarter-btn').forEach(t => {
@@ -397,6 +392,15 @@ class App {
 
         } catch (error) {
             console.error("Failed to load dynamic registry:", error);
+            const clearBtn = document.getElementById('clear-majors');
+            const container = clearBtn?.parentElement?.parentElement?.querySelector('.max-h-36');
+            if (container) {
+                container.innerHTML = `
+                    <div class="text-center text-theme-status-err text-xs py-4 flex flex-col items-center">
+                        <i data-lucide="alert-triangle" class="w-4 h-4 mb-1"></i> Failed to load departments
+                    </div>`;
+                if (window.lucide) lucide.createIcons();
+            }
         }
     }
 

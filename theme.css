@@ -149,3 +149,14 @@ details[open] summary ~ * { animation: slideDown 0.2s ease-in-out; }
 
 .bg-alert-blue { background-color: #f0f4f8; color: #2a4365; border-color: #e2e8f0; }
 .dark .bg-alert-blue { background-color: #1a202c; color: #bee3f8; border-color: #2a4365; }
+
+/* =========================================
+   Filter Active States
+   ========================================= */
+
+/* Use !important to cleanly override the default Tailwind base classes on the HTML elements */
+.filter-btn.active, .filter-chip.active {
+    border-color: var(--accent-main) !important;
+    background-color: var(--accent-bg) !important;
+    color: var(--accent-text) !important;
+}

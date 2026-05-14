@@ -27,7 +27,7 @@ def run(config=None):
     updates_made = run_worker_pipeline(
         queue_db_path = paths.get('queue_db', 'data/queue.db'),
         dataset_dir   = paths.get('dataset_dir', 'data/schedules_dataset'),
-        registry_path = paths.get('registry_path', 'data/registry.json'),
+        registry_path = paths.get('registry', 'data/registry.json'),
         **targets,
         **scraping
     )
