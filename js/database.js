@@ -1,4 +1,4 @@
-import * as duckdb from 'https://cdn.jsdelivr.net/npm/@duckdb/duckdb-wasm@1.28.0/+esm';
+import * as duckdb from 'https://cdn.jsdelivr.net/npm/@duckdb/duckdb-wasm@1.32.0/+esm';
 import { buildWhereClause } from './utils.js';
 
 export class DatabaseManager {
@@ -134,21 +134,13 @@ export class DatabaseManager {
             const whereClause = buildWhereClause(filters, majorToPrefixes);
             // We translate the limit/offset into a DENSE_RANK window boundary
             const rankFilter = limit === 'all' ? '' : `WHERE course_rank > ${offset} AND course_rank <= ${offset + limit}`;
-
-            // This returns FLAT rows cleanly without triggering the Arrow nested list bug!
-            const sql = `
-                WITH Filtered AS (
-                    SELECT * FROM courses WHERE ${whereClause}
-                ),
-                Ranked AS (
-                    SELECT *, DENSE_RANK() OVER (ORDER BY course_prefix ASC, course_number ASC) as course_rank
-                    FROM Filtered
-                )
-                SELECT * FROM Ranked
-                ${rankFilter}
-                ORDER BY course_rank ASC, term_code DESC
-            `;
             
+            const sql = 
+                `WITH Filtered AS ` + 
+                `(SELECT * FROM courses WHERE ${whereClause}), ` +
+                `Ranked AS (SELECT *, DENSE_RANK() OVER (ORDER BY course_prefix ASC, course_number ASC) as course_rank FROM Filtered) ` +
+                `SELECT * FROM Ranked ${rankFilter} ORDER BY course_rank ASC, term_code DESC`;
+
             const arrowResult = await this.conn.query(sql);
             return arrowResult.toArray();
         }, "Fetch Unified Page");
