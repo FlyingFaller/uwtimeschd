@@ -53,7 +53,7 @@ export const buildWhereClause = (filters, majorToPrefixes = {}) => {
 
         const levelConds = [];
         if (levelHundreds.length > 0) {
-            levelConds.push(`CAST(course_number / 100 AS INT) IN (${levelHundreds.join(', ')})`);
+            levelConds.push(`CAST(course_number // 100 AS INT) IN (${levelHundreds.join(', ')})`);
         }
         if (has800Plus) {
             levelConds.push(`course_number >= 800`);
