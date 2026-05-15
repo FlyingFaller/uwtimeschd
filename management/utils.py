@@ -15,31 +15,6 @@ def load_config(path: str = "config.json") -> dict[str: dict[str: Any]]:
     with open(path, 'r') as f:
         return json.load(f)
 
-def stitch_database(chunk_dir: str = "data/", output_path: str = "data/schedules.db") -> bool:
-    """
-    Reassembles .00, .01 chunks into a single SQLite file.
-    Returns True if stitched, False if no chunks were found.
-    """
-    chunks = sorted(glob.glob(os.path.join(chunk_dir, "schedules.db.*")))
-    
-    if not chunks:
-        logger.warning(f"No chunks found in {chunk_dir}. Assuming fresh database.")
-        
-        return False
-        
-    logger.info(f"Reassembling {len(chunks)} chunks into {output_path}.")
-    
-    # Ensure directory exists
-    os.makedirs(os.path.dirname(output_path), exist_ok=True)
-    
-    with open(output_path, 'wb') as outfile:
-        for chunk in chunks:
-            with open(chunk, 'rb') as infile:
-                outfile.write(infile.read())
-                
-    logger.info(f"Reassembly complete.")
-    return True
-
 def fetch_page(url: str, delay:float = 0.5) -> tuple[int, str|None]:
     """
     Fetches the HTML content of a given URL gracefully.
