@@ -77,9 +77,9 @@ export class CourseService {
                     course_prefix: row.course_prefix,
                     course_number: row.course_number,
                     course_title: row.course_title,
-                    has_prerequisites: row.has_prerequisites,
-                    gen_ed_reqs: row.gen_ed_reqs ? [...row.gen_ed_reqs] : [],
-                    notes: row.notes,
+                    // has_prerequisites: row.has_prerequisites,
+                    // gen_ed_reqs: row.gen_ed_reqs ? [...row.gen_ed_reqs] : [],
+                    // notes: row.notes,
                     terms: []
                 });
             }
@@ -98,6 +98,9 @@ export class CourseService {
                 ui_year: ui_year,
                 ui_quarter: ui_quarter,
                 formatted_quarter: `${ui_quarter} ${ui_year}`,
+                has_prerequisites: row.has_prerequisites,                       // Moved here
+                gen_ed_reqs: row.gen_ed_reqs ? [...row.gen_ed_reqs] : [],       // Moved here
+                notes: row.notes,                                               // Moved here
                 sections: rawSections.map(sec => this.shapeSection(sec))
             });
         });

@@ -76,6 +76,7 @@ class App {
                 this.markSearchReady();
             },
             // Handlers for the Unified Mode Term Buttons
+            // Handlers for the Unified Mode Term Buttons
             '.unified-term-btn': (btn, e) => {
                 // Prevent the <details> accordion from toggling when interacting with buttons
                 e.preventDefault(); 
@@ -90,8 +91,6 @@ class App {
                     b.className = `unified-term-btn shrink-0 whitespace-nowrap px-3 py-1 rounded border text-xs tracking-wider transition-all ${b.dataset.qcolor}`;
                     
                     if (b === btn) {
-                        // Swapped ring-theme-accent-main for ring-current to match the badge text color
-                        // Removed ring-offset classes to make the ring sit flush with the border
                         b.classList.add('ring-2', 'ring-current', 'font-extrabold', 'shadow-sm');
                     } else {
                         b.classList.add('opacity-50', 'hover:opacity-80', 'font-medium');
@@ -109,12 +108,19 @@ class App {
                     activeBadge.textContent = btn.textContent.trim();
                 }
 
-                // 3. Toggle visibility of the correct tbody
-                card.querySelectorAll('.term-tbody').forEach(tbody => {
-                    if (tbody.dataset.termContent === termIndex) {
-                        tbody.classList.remove('hidden');
+                // 3. Toggle visibility of BOTH the tbody and the summary info
+                card.querySelectorAll('.term-tbody, .term-summary-info').forEach(el => {
+                    if (el.dataset.termContent === termIndex) {
+                        el.classList.remove('hidden');
+                        // If it's a summary block with actual content, restore its flex layout
+                        if (el.classList.contains('term-summary-info') && el.innerHTML.trim() !== '') {
+                            el.classList.add('flex');
+                        }
                     } else {
-                        tbody.classList.add('hidden');
+                        el.classList.add('hidden');
+                        if (el.classList.contains('term-summary-info')) {
+                            el.classList.remove('flex');
+                        }
                     }
                 });
             }

@@ -243,9 +243,8 @@ export class UIManager {
         const slug = code.replace(/\s+/g, '').toLowerCase(); 
         const anchor = `${course.course_prefix.replace(/\s+/g, '').toLowerCase()}${course.course_number}`;
         const courseLink = `https://www.washington.edu/students/crscat/${slug}.html#${anchor}`;
-        const hasReqs = course.has_prerequisites || (course.gen_ed_reqs && course.gen_ed_reqs.length > 0);
 
-        // Generate the term switcher buttons 
+        // 1. Generate the term switcher buttons 
         const termButtonsHtml = course.terms.map((term, index) => {
             const qColor = getQuarterColorClasses(term.formatted_quarter);
             // First button is active by default. Removed ring-offset classes to make it flush.
@@ -260,11 +259,35 @@ export class UIManager {
             `;
         }).join('');
 
-        // The default active term to display in the right-hand badge
+        // 2. The default active term to display in the right-hand badge
         const defaultTermText = course.terms[0].formatted_quarter;
         const defaultTermColor = getQuarterColorClasses(defaultTermText);
 
-        // Generate multiple tbodys, hiding all but the first
+        // 3. NEW: Generate the dynamic summary blocks for each term
+        const requirementsHtml = `
+            <div class="hidden group-open/card:block mt-2">
+                ${course.terms.map((term, index) => {
+                    const termHasReqs = term.has_prerequisites || (term.gen_ed_reqs && term.gen_ed_reqs.length > 0);
+                    
+                    // Generate an empty hidden div if there's no info, so the JS index syncing doesn't break
+                    if (!termHasReqs && !term.notes) {
+                        return `<div class="term-summary-info hidden" data-term-content="${index}"></div>`;
+                    }
+                    
+                    const displayClass = index === 0 ? 'flex' : 'hidden';
+                    
+                    return `
+                        <div class="term-summary-info ${displayClass} flex-wrap items-center gap-x-2 gap-y-1.5" data-term-content="${index}">
+                            ${term.has_prerequisites ? `<span class="inline-flex items-center gap-1 px-1.5 py-0.5 border rounded text-[10px] font-bold uppercase tracking-wider tag-red" title="Prerequisites Required"><i data-lucide="alert-circle" class="w-3 h-3"></i> PREREQS</span>` : ''}
+                            ${term.gen_ed_reqs.map(req => `<span class="inline-flex items-center px-1.5 py-0.5 border rounded text-[10px] font-bold tracking-wider tag-indigo" title="General Education Requirement">${req}</span>`).join('')}
+                            ${term.notes ? `<span class="flex items-center gap-1.5 text-[11px] text-theme-text-muted font-medium ml-1"><i data-lucide="info" class="w-3.5 h-3.5 opacity-70 shrink-0"></i><span class="leading-relaxed">${term.notes}</span></span>` : ''}
+                        </div>
+                    `;
+                }).join('')}
+            </div>
+        `;
+
+        // 4. Generate multiple tbodys, hiding all but the first
         const tbodysHtml = course.terms.map((term, index) => {
             const sectionRowsHtml = term.sections.map(sec => this._createSectionRow(sec)).join('');
             const hiddenClass = index === 0 ? '' : 'hidden';
@@ -280,10 +303,8 @@ export class UIManager {
                 <summary class="cursor-pointer px-4 pt-4 pb-4 group-open/card:pb-1.5 border-b border-theme-border group-open/card:border-b-0 bg-theme-surface hover:bg-theme-surface-hover [details:has(thead:hover)_&]:bg-theme-surface-hover transition-colors group/summary">
                     <div class="flex flex-col gap-3 w-full">
                         
-                        <!-- Title Row -->
                         <div class="flex items-start justify-between gap-4">
                             
-                            <!-- Link Wrapper absorbs the flex space to restrict the clickable area -->
                             <div class="flex-1 min-w-0 flex items-center">
                                 <a href="${courseLink}" target="_blank" rel="noopener noreferrer" class="flex items-center gap-3 group/link w-fit max-w-full" onclick="event.stopPropagation()">
                                     <h2 class="text-lg font-extrabold text-theme-text-main tracking-tight flex items-center gap-2 transition-colors group-hover/link:text-theme-accent-main shrink-0">
@@ -303,20 +324,12 @@ export class UIManager {
                             </div>
                         </div>
 
-                        <!-- Terms Row: Moved to its own full-width flex container -->
-                        <!-- pb-3 adds room for the scrollbar. px-1 allows the ring outline to render without clipping. -ml-1 realigns it flush left. -->
                         <div class="flex overflow-x-auto gap-2 pb-3 pt-1 px-1 -ml-1 w-full">
                             ${termButtonsHtml}
                         </div>
                     </div>
 
-                    ${(hasReqs || course.notes) ? `
-                        <div class="hidden group-open/card:flex flex-wrap items-center gap-x-2 gap-y-1.5 mt-2">
-                            ${course.has_prerequisites ? `<span class="inline-flex items-center gap-1 px-1.5 py-0.5 border rounded text-[10px] font-bold uppercase tracking-wider tag-red" title="Prerequisites Required"><i data-lucide="alert-circle" class="w-3 h-3"></i> PREREQS</span>` : ''}
-                            ${course.gen_ed_reqs.map(req => `<span class="inline-flex items-center px-1.5 py-0.5 border rounded text-[10px] font-bold tracking-wider tag-indigo" title="General Education Requirement">${req}</span>`).join('')}
-                            ${course.notes ? `<span class="flex items-center gap-1.5 text-[11px] text-theme-text-muted font-medium ml-1"><i data-lucide="info" class="w-3.5 h-3.5 opacity-70 shrink-0"></i><span class="leading-relaxed">${course.notes}</span></span>` : ''}
-                        </div>
-                    ` : ''}
+                    ${requirementsHtml}
                 </summary>
                 
                 <div class="bg-theme-surface">
