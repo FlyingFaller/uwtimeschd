@@ -73,9 +73,55 @@ export class UIManager {
         }
     }
 
+    renderSyntaxErrorState(error) {
+        if (this.container) {
+            // Extract the specific Peggy error message safely
+            const detailedMsg = error?.message || "Unknown syntax error";
+
+            this.container.innerHTML = `
+            <div class="text-center p-8 max-w-md mx-auto fade-in">
+                <i data-lucide="terminal" class="w-12 h-12 mx-auto text-theme-status-err opacity-80 mb-4"></i>
+                
+                <h3 class="text-lg font-medium text-theme-text-main mb-2">Search Syntax Error</h3>
+                
+                <p class="text-sm text-theme-status-err font-mono mb-4">
+                    ${detailedMsg}
+                </p>
+            </div>`;
+            
+            if (window.lucide) window.lucide.createIcons();
+        }
+
+        // Apply the red outline to the search bar (including focus states to prevent override!)
+        const searchInput = document.getElementById('omni-search');
+        if (searchInput) {
+            searchInput.classList.add(
+                'border-theme-status-err', 
+                'ring-1', 
+                'ring-theme-status-err',
+                'focus:border-theme-status-err', 
+                'focus:ring-theme-status-err'
+            );
+        }
+    }
+
+    clearSyntaxErrorState() {
+        const searchInput = document.getElementById('omni-search');
+        if (searchInput) {
+            searchInput.classList.remove(
+                'border-theme-status-err', 
+                'ring-1', 
+                'ring-theme-status-err',
+                'focus:border-theme-status-err', 
+                'focus:ring-theme-status-err'
+            );
+        }
+    }
+
     toggleAll(expand) {
         document.querySelectorAll('details.course-card').forEach(detail => detail.open = expand);
     }
+    
 
     _createDetailsHtml(sec) {
         let html = '';
@@ -365,7 +411,7 @@ export class UIManager {
             this.container.innerHTML = `
                 <div class="text-center py-20">
                     <i data-lucide="search-x" class="w-12 h-12 text-theme-text-muted mx-auto mb-3"></i>
-                    <h3 class="text-lg font-medium text-theme-text-main">No courses found</h3>
+                    <h3 class="text-lg font-medium text-theme-text-main">No Courses Found</h3>
                     <p class="text-theme-text-muted text-sm mt-1">Try adjusting your filters or search terms.</p>
                 </div>`;
             if (window.lucide) lucide.createIcons();

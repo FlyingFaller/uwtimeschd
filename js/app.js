@@ -2,6 +2,9 @@ import { DatabaseManager } from './database.js';
 import { UIManager } from './ui.js';
 import { AppStore } from './store.js';
 import { CourseService } from './service.js';
+import { parse } from './parser.mjs'; 
+import { SemanticExpander } from './expander.js';
+import { SQLCompiler } from './compiler.js';
 
 class App {
     constructor() {
@@ -12,6 +15,7 @@ class App {
         // Built by the deduplication algorithm during init
         this.prefixToMajor = {}; 
         this.majorToPrefixes = {}; 
+        this.validBuildings = [];
 
         this.currentSearchController = null;
         
@@ -343,13 +347,20 @@ class App {
         try {
             const response = await fetch('data/registry.json');
             if (!response.ok) throw new Error("Failed to load registry.json metadata.");
-            const registry = await response.json();
+            
+            // Parse the new root object containing both 'majors' and 'buildings'
+            const fullRegistry = await response.json();
+            const majorsRegistry = fullRegistry.majors || {};
+            
+            // Store the buildings array for the SemanticExpander
+            this.validBuildings = fullRegistry.buildings || []; 
             
             this.prefixToMajor = {}; 
             this.majorToPrefixes = {}; 
             
             const prefixCounts = {};
-            for (const [majorCode, data] of Object.entries(registry)) {
+            // Iterate over majorsRegistry instead of the root object
+            for (const [majorCode, data] of Object.entries(majorsRegistry)) {
                 this.majorToPrefixes[majorCode] = []; 
                 if (!data.prefixes) continue;
                 
@@ -365,20 +376,25 @@ class App {
                 this.majorToPrefixes[majorCode].push(prefix);
             }
             
+            // Instantiate expander and compiler for text queries
+            this.expander = new SemanticExpander(this.prefixToMajor, this.validBuildings);
+            this.compiler = new SQLCompiler();
+
             const clearBtn = document.getElementById('clear-majors');
             const container = clearBtn?.parentElement?.parentElement?.querySelector('.max-h-36');
             if (!container) return;
             
             let html = `<label class="major-label-wrapper flex items-center gap-2 cursor-pointer hover:bg-theme-surface-hover p-1 rounded transition-colors" data-search="all departments"><input type="checkbox" class="accent-theme-accent-main major-checkbox" value="ALL" checked> All Departments</label>`;
             
-            const sortedMajors = Object.keys(registry).sort((a, b) => {
-                const nameA = registry[a].major_name || a;
-                const nameB = registry[b].major_name || b;
+            // Sort using majorsRegistry keys
+            const sortedMajors = Object.keys(majorsRegistry).sort((a, b) => {
+                const nameA = majorsRegistry[a].major_name || a;
+                const nameB = majorsRegistry[b].major_name || b;
                 return nameA.localeCompare(nameB);
             });
 
             sortedMajors.forEach(majorCode => {
-                const data = registry[majorCode];
+                const data = majorsRegistry[majorCode];
                 const winningPrefixes = this.majorToPrefixes[majorCode];
                 
                 if (!winningPrefixes || winningPrefixes.length === 0) return;
@@ -440,7 +456,34 @@ class App {
         }
         
         this.ui.showLoading();
+
+        // compile text queries here and pass them to utils.js
+        // this.store.filters.compiledQuery = "1=1"; // Default safe state
+        this.store.filters.compiledQuery = null; // Default safe state
+        this.ui.clearSyntaxErrorState();
         
+        if (this.store.filters.query) {
+            try {
+                const ast = parse(this.store.filters.query);
+                const expandedAst = this.expander.expand(ast);
+                this.store.filters.compiledQuery = this.compiler.compile(expandedAst);
+            } catch (error) {
+                console.warn("[Parser] Syntax error in query:", error);
+                
+                // 1. Turn off the loading spinner
+                this.ui.showLoading(false);
+                
+                // 2. Delegate the UI rendering to the View controller
+                this.ui.renderSyntaxErrorState(error);
+                
+                // 3. Re-enable the search button so they can fix the typo and try again
+                this.markSearchReady(); 
+                
+                // Abort the rest of the database execution
+                return; 
+            }
+        }
+
         try {
             const limit = this.store.filters.loadAll ? 'all' : 25;
             const isUnified = this.store.filters.unifiedMode;

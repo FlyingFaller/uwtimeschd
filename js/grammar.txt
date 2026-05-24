@@ -1,0 +1,87 @@
+// --- The Root ---
+Query
+  = _ expr:Expression _ { return expr; }
+
+Expression
+  = OrExpression
+
+// --- Logical OR (||) ---
+OrExpression
+  = head:AndExpression tail:(_ "||" _ AndExpression)+ {
+      return tail.reduce(function(result, element) {
+        return { type: "OR", left: result, right: element[3] };
+      }, head);
+    }
+  / AndExpression
+
+// --- Explicit AND (&&) ---
+AndExpression
+  = head:ImplicitAndExpression tail:(_ "&&" _ ImplicitAndExpression)+ {
+      return tail.reduce(function(result, element) {
+        return { type: "AND", left: result, right: element[3] };
+      }, head);
+    }
+  / ImplicitAndExpression
+
+// --- Implicit AND (Spaces between distinct blocks) ---
+ImplicitAndExpression
+  = head:Primary tail:(_ Primary)+ {
+      return tail.reduce(function(result, element) {
+        return { type: "AND", left: result, right: element[1] };
+      }, head);
+    }
+  / Primary
+
+// --- Core Types ---
+Primary
+  = "!" _ expr:Primary { return { type: "NOT", value: expr }; }
+  / "(" _ expr:Expression _ ")" { return expr; }
+  / Specifier
+  / ExactMatch
+  / TextChunk
+
+// --- Specific Extractors ---
+ // --- Explicitly Whitelist Your Allowed Keys ---
+ValidSpecifierKey
+  = "instructor"i / "prof"i / "building"i / "room"i / "sln"i / "title"i / "course"i / "gened"i
+
+// --- Update the Specifier Rule to normalize the key ---
+Specifier
+  = key:ValidSpecifierKey ":" value:(ExactMatch / TextChunkNoSpace) { 
+      return { 
+        type: "SPECIFIER", 
+        key: key.toLowerCase(), // Normalizes 'SLN' and 'sln' to just 'sln'
+        value: value.value ? value.value : value 
+      }; 
+    }
+
+ExactMatch
+  = '"' chars:[^"]+ '"' { return { type: "EXACT", value: chars.join("") }; }
+
+// --- The "Catch-All" Text Chunk ---
+// Grabs everything until it hits a syntax boundary. 
+TextChunk
+  = chars:ChunkChar+ { 
+      return { type: "WORD", value: chars.join("").trim() }; 
+    }
+
+// A character is valid as long as it's not the start of a syntax boundary
+ChunkChar
+  = !("&&" / "||" / "!" / "(" / ")" / '"' / SpecifierLookahead) char:. { 
+      return char; 
+    }
+
+// Lookahead to ensure we don't accidentally consume a specifier like "sln:"
+// --- The Lookahead (Prevents TextChunk from eating specifiers) ---
+SpecifierLookahead
+  = ValidSpecifierKey ":"
+
+TextChunkNoSpace
+  = chars:[a-zA-Z0-9_]+ { return chars.join(""); }
+
+WordString
+  = chars:[a-zA-Z0-9_]+ { return chars.join(""); }
+
+// Optional Whitespace (now safely handling leading/trailing)
+_ "whitespace"
+  = [ \t]*

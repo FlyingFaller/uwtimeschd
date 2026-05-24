@@ -13,13 +13,8 @@ export const getQuarterColorClasses = (quarterStr) => {
 export const buildWhereClause = (filters, majorToPrefixes = {}) => {
     let conditions = []; // Tweak 3: Removed 1=1 boilerplate
 
-    if (filters.query) {
-        let clean = filters.query.replace(/['"*;%_]/g, ' ').trim();
-        if (clean) {
-            const tokens = clean.split(/\s+/);
-            const likeConds = tokens.map(t => `search_text ILIKE '%${t}%'`);
-            conditions.push(`(${likeConds.join(' AND ')})`);
-        }
+    if (filters.compiledQuery) {
+        conditions.push(`(${filters.compiledQuery})`);
     }
 
     if (filters.majors.length > 0) {
