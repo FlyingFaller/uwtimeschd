@@ -52,7 +52,10 @@ class ScheduleDatabase:
         self.dataset_dir = dataset_dir
         self.registry_path = registry_path
         self.courses = []
-        self.registry = {}
+        self.registry = {
+            "majors": {},
+            "buildings": []
+        }
 
     def load(self):
         """Loads Parquet datasets and JSON registry into memory."""
@@ -94,19 +97,37 @@ class ScheduleDatabase:
         self.courses = [c for c in self.courses if c['course_id'] not in new_course_ids]
         self.courses.extend(prepared_courses)
 
-        # 3. Update Registry
-        if major_code not in self.registry:
-            self.registry[major_code] = {
+        # 3. Extract Unique Buildings from this payload
+        buildings_in_payload = set()
+        for course in prepared_courses:
+            for section in course.get('sections', []):
+                for meeting in section.get('meetings', []):
+                    br = meeting.get('building_room')
+                    if br:
+                        # Extract the building code (e.g., "KNE 130" -> "KNE")
+                        building_code = br.split(' ')[0]
+                        buildings_in_payload.add(building_code)
+
+        # 4. Update Registry Root
+        existing_buildings = set(self.registry["buildings"])
+        existing_buildings.update(buildings_in_payload)
+        self.registry["buildings"] = sorted(list(existing_buildings))
+
+        # 5. Update Majors Dictionary
+        majors_dict = self.registry["majors"]
+        
+        if major_code not in majors_dict:
+            majors_dict[major_code] = {
                 "major_name": major_name,
                 "college": college,
                 "prefixes": {}
             }
         else:
-            self.registry[major_code]["major_name"] = major_name
-            self.registry[major_code]["college"] = college
+            majors_dict[major_code]["major_name"] = major_name
+            majors_dict[major_code]["college"] = college
         
         payload_prefixes = Counter(c['course_prefix'] for c in prepared_courses)
-        target_prefixes = self.registry[major_code]["prefixes"]
+        target_prefixes = majors_dict[major_code]["prefixes"]
         
         for prefix, count in payload_prefixes.items():
             target_prefixes[prefix] = target_prefixes.get(prefix, 0) + count
