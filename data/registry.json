@@ -14,6 +14,20 @@
                 "AMATH": 1630
             }
         },
+        "cee": {
+            "major_name": "CIVIL & ENVIRONMENTAL ENGINEERING",
+            "college": "COLLEGE OF ENGINEERING",
+            "prefixes": {
+                "CEE": 2617
+            }
+        },
+        "cheng": {
+            "major_name": "CHEMICAL ENGINEERING",
+            "college": "COLLEGE OF ENGINEERING",
+            "prefixes": {
+                "CHEM E": 1700
+            }
+        },
         "cse": {
             "major_name": "COMPUTER SCIENCE & ENGINEERING",
             "college": "COLLEGE OF ENGINEERING",
@@ -28,16 +42,31 @@
                 "E E": 3564
             }
         },
+        "engr": {
+            "major_name": "ENGINEERING",
+            "college": "COLLEGE OF ENGINEERING",
+            "prefixes": {
+                "ENGR": 824
+            }
+        },
         "meche": {
             "major_name": "MECHANICAL ENGINEERING",
             "college": "COLLEGE OF ENGINEERING",
             "prefixes": {
                 "M E": 2763
             }
+        },
+        "mse": {
+            "major_name": "MATERIALS SCIENCE & ENGINEERING",
+            "college": "COLLEGE OF ENGINEERING",
+            "prefixes": {
+                "MSE": 1820
+            }
         }
     },
     "buildings": [
         "AER",
+        "ALD",
         "AND",
         "ARC",
         "ART",
@@ -61,6 +90,7 @@
         "EGA",
         "EGL",
         "EXED",
+        "FIS",
         "FLK",
         "FSH",
         "FTR",
@@ -73,23 +103,36 @@
         "HHL",
         "HND",
         "HRC",
+        "HSB",
         "HSD",
+        "HSE",
+        "HSEB",
         "HSG",
+        "HSI",
         "HST",
         "IEB",
         "JHN",
         "KNE",
+        "L0W",
         "LAW",
         "LEW",
         "LOW",
+        "LSB",
+        "MAH",
+        "MAN",
         "MAR",
+        "MCC",
+        "MDR",
         "MEB",
         "MGH",
         "MLR",
+        "MOE",
+        "MOL",
         "MOR",
         "MUE",
         "MUS",
         "NAN",
+        "OCN",
         "OTB",
         "OUG",
         "PAA",
@@ -99,9 +142,13 @@
         "PCAR",
         "PDL",
         "RAI",
+        "ROB",
+        "RTB",
+        "RVE",
         "SAV",
         "SIG",
         "SMI",
+        "SOCC",
         "SWS",
         "THO",
         "WFS",
