@@ -3,7 +3,7 @@ import logging
 from contextlib import closing
 from management.utils import fetch_page
 from management.queue_manager import init_queue_db, discover_tasks, get_tasks, mark_task_status
-from management.database_manager import ScheduleDatabase, clear_database
+from management.database_manager import ScheduleDatabase, clear_database, clear_registry
 from parse.schedule import parse_schedule, parse_major_college
 from parse.normalize import normalize_schedule_data
 from parse.verify import verify_schedule_data
@@ -33,6 +33,7 @@ def run_worker_pipeline(
         
         if invalidate:
             logger.info("Invalidation requested. Wiping existing dataset.")
+            clear_registry(registry_path)
             clear_database(dataset_dir)
         
         logger.info(f"Generating tasks.")

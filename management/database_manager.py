@@ -42,6 +42,11 @@ def clear_database(dataset_dir: str):
         shutil.rmtree(dataset_dir)
         logger.info(f"Cleared existing dataset directory at {dataset_dir}")
 
+def clear_registry(registry_path: str):
+    """Deletes the registry file."""
+    if os.path.exists(registry_path):
+        os.remove(registry_path)
+        logger.info(f"Cleared existing registry file at {registry_path}")
 
 # ==========================================
 # DATABASE CLASS (State Encapsulation)
