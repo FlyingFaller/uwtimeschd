@@ -169,9 +169,20 @@ def clean_credits(val: str) -> tuple[int | None, int | None, str | None]:
     
     if v.isalpha() and v != "VAR":
         return None, None, v # Pure alphabetical (QZ, LB, ST)
+    
     if "-" in v:
-        parts = v.split("-")
-        return int(parts[0]), int(parts[1]), None # e.g. "1-5"
+        parts = v.split("-", 1)
+        
+        # Safely parse whatever integers are present
+        min_c = int(parts[0]) if parts[0].strip() else None
+        max_c = int(parts[1]) if len(parts) > 1 and parts[1].strip() else None
+        
+        # Mirror the value to the missing side for the database
+        min_c = min_c if min_c is not None else max_c
+        max_c = max_c if max_c is not None else min_c
+        
+        return min_c, max_c, None
+    
     if v.isdigit() or "." in v:
         try:
             c = int(float(v))
