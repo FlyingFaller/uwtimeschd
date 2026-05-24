@@ -70,7 +70,7 @@ def normalize_schedule_data(courses: list[RawCourseDict]) -> list[NormalizedCour
             'course_prefix'    : course['course_prefix'] or None,
             'course_number'    : clean_int(course['course_number']),
             'course_title'     : course['course_title'] or None,
-            "gen_ed_reqs"      : clean_gen_eds(course['gen_ed_reqs']),
+            'gen_ed_reqs'      : clean_gen_eds(course['gen_ed_reqs']),
             'has_prerequisites': bool(course['prerequisites']),
             'notes'            : course['notes'],
             'sections'         : []
