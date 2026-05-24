@@ -1,37 +1,110 @@
 {
-    "aa": {
-        "major_name": "AERONAUTICS & ASTRONAUTICS",
-        "college": "COLLEGE OF ENGINEERING",
-        "prefixes": {
-            "A A": 2073
+    "majors": {
+        "aa": {
+            "major_name": "AERONAUTICS & ASTRONAUTICS",
+            "college": "COLLEGE OF ENGINEERING",
+            "prefixes": {
+                "A A": 2073
+            }
+        },
+        "appmath": {
+            "major_name": "APPLIED MATHEMATICS",
+            "college": "COLLEGE OF ARTS AND SCIENCES",
+            "prefixes": {
+                "AMATH": 1630
+            }
+        },
+        "cse": {
+            "major_name": "COMPUTER SCIENCE & ENGINEERING",
+            "college": "COLLEGE OF ENGINEERING",
+            "prefixes": {
+                "CSE": 3906
+            }
+        },
+        "ee": {
+            "major_name": "ELECTRICAL ENGINEERING",
+            "college": "COLLEGE OF ENGINEERING",
+            "prefixes": {
+                "E E": 3564
+            }
+        },
+        "meche": {
+            "major_name": "MECHANICAL ENGINEERING",
+            "college": "COLLEGE OF ENGINEERING",
+            "prefixes": {
+                "M E": 2763
+            }
         }
     },
-    "appmath": {
-        "major_name": "APPLIED MATHEMATICS",
-        "college": "COLLEGE OF ARTS AND SCIENCES",
-        "prefixes": {
-            "AMATH": 1630
-        }
-    },
-    "cse": {
-        "major_name": "COMPUTER SCIENCE & ENGINEERING",
-        "college": "COLLEGE OF ENGINEERING",
-        "prefixes": {
-            "CSE": 3906
-        }
-    },
-    "ee": {
-        "major_name": "ELECTRICAL ENGINEERING",
-        "college": "COLLEGE OF ENGINEERING",
-        "prefixes": {
-            "E E": 3564
-        }
-    },
-    "meche": {
-        "major_name": "MECHANICAL ENGINEERING",
-        "college": "COLLEGE OF ENGINEERING",
-        "prefixes": {
-            "M E": 2763
-        }
-    }
+    "buildings": [
+        "AER",
+        "AND",
+        "ARC",
+        "ART",
+        "ATG",
+        "BAG",
+        "BIOE",
+        "BLD",
+        "BLM",
+        "BNS",
+        "CDH",
+        "CHL",
+        "CLK",
+        "CMU",
+        "CSE",
+        "CSE2",
+        "DEM",
+        "DEN",
+        "ECE",
+        "EE1",
+        "EEB",
+        "EGA",
+        "EGL",
+        "EXED",
+        "FLK",
+        "FSH",
+        "FTR",
+        "GLD",
+        "GNOM",
+        "GUG",
+        "GWN",
+        "HCK",
+        "HGT",
+        "HHL",
+        "HND",
+        "HRC",
+        "HSD",
+        "HSG",
+        "HST",
+        "IEB",
+        "JHN",
+        "KNE",
+        "LAW",
+        "LEW",
+        "LOW",
+        "MAR",
+        "MEB",
+        "MGH",
+        "MLR",
+        "MOR",
+        "MUE",
+        "MUS",
+        "NAN",
+        "OTB",
+        "OUG",
+        "PAA",
+        "PAB",
+        "PAR",
+        "PAT",
+        "PCAR",
+        "PDL",
+        "RAI",
+        "SAV",
+        "SIG",
+        "SMI",
+        "SWS",
+        "THO",
+        "WFS",
+        "WIL"
+    ]
 }
