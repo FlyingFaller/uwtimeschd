@@ -353,6 +353,10 @@ def parse_section_table(table: Tag, boundaries: dict[str, tuple[int, int|None]])
     current_section = None
     notes = []
     
+    # We track this to avoid the tiny but proven chance that a note row can masquerade as an 
+    # additional meeting time
+    has_notes = False
+
     for raw_line in lines:
         line = raw_line.strip('\r\n')
         if not line.strip():
@@ -369,16 +373,19 @@ def parse_section_table(table: Tag, boundaries: dict[str, tuple[int, int|None]])
                 sections.append(current_section)
                 notes = []
             current_section = new_section
+            has_notes = False
             continue
 
         # 2. Secondary Meeting Time Detection
-        if current_section and parse_additional_times(chunks, current_section):
-            continue
+        if current_section and not has_notes:
+            if parse_additional_times(chunks, current_section):
+                continue
 
         # 3. Note Line Detection
         cleaned_note = line.strip()
         if cleaned_note:
             notes.append(cleaned_note)
+            has_notes = True
             
     if current_section:
         notes_str = re.sub(r'\s{2,}', ' ', ' '.join(notes).strip())
