@@ -7,12 +7,13 @@ from parse.debug import print_schedule, print_dict
 
 
 # URL = "https://www.washington.edu/students/timeschd/WIN2021/aa.html"
-URL = "https://www.washington.edu/students/timeschd/SPR2008/cse.html"
+# URL = "https://www.washington.edu/students/timeschd/SPR2008/cse.html"
 # URL = "https://www.washington.edu/students/timeschd/AUT2021/aa.html"
 # URL = "https://www.washington.edu/students/timeschd/SUM2021/aa.html"
 # URL = "https://www.washington.edu/students/timeschd/AUT2005/meche.html"
+URL = "https://www.washington.edu/students/timeschd/AUT2018/cee.html"
 code, html = fetch_page(URL, delay=0.0)
 courses = parse_schedule(html)
 print_schedule(courses)
 clean_courses = normalize_schedule_data(courses)
-print_dict(clean_courses[-17])
+print_dict(clean_courses[-18])
