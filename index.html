@@ -332,14 +332,67 @@
                     <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
                         <i data-lucide="search" class="text-theme-text-muted w-5 h-5"></i>
                     </div>
+                    
                     <input 
                         type="text" 
                         id="omni-search"
                         disabled
-                        placeholder="Search prefix, course number, title, instructor, building, or SLN... (e.g. AA 210, Hurlen)" 
-                        class="w-full pl-10 pr-4 py-2.5 bg-theme-surface-alt border border-theme-border rounded-lg shadow-inner text-sm text-theme-text-main focus:bg-theme-surface focus:ring-2 focus:ring-theme-accent-main focus:border-theme-border-focus outline-none transition-all disabled:opacity-50"
+                        placeholder="Search prefix, course number, title, instructor, building, or SLN..." 
+                        class="w-full pl-10 pr-12 py-2.5 bg-theme-surface-alt border border-theme-border rounded-lg shadow-inner text-sm text-theme-text-main focus:bg-theme-surface focus:ring-2 focus:ring-theme-accent-main focus:border-theme-border-focus outline-none transition-all disabled:opacity-50"
                     >
+
+                    <div class="absolute inset-y-0 right-0 pr-3.5 flex items-center group/tooltip z-50">
+                        <button type="button" class="text-theme-text-muted hover:text-theme-accent-main transition-colors cursor-help outline-none">
+                            <i data-lucide="help-circle" class="w-5 h-5"></i>
+                        </button>
+
+                        <div class="absolute top-[calc(100%+8px)] right-0 w-[360px] p-4 bg-theme-surface border border-theme-border rounded-lg shadow-xl opacity-0 invisible group-hover/tooltip:opacity-100 group-hover/tooltip:visible transition-all duration-200 text-left pointer-events-none group-hover/tooltip:pointer-events-auto origin-top-right">
+                            <h4 class="text-sm font-bold text-theme-text-main mb-3 border-b border-theme-border pb-2 flex items-center gap-2">
+                                <i data-lucide="terminal" class="w-4 h-4 text-theme-accent-main"></i>
+                                Search Syntax Guide
+                            </h4>
+                            
+                            <ul class="list-disc pl-4 text-[11px] text-theme-text-muted space-y-3.5 marker:text-theme-accent-main">
+                                <li class="pl-0.5">
+                                    <strong class="text-theme-text-main">Basics & Exact Phrases:</strong> 
+                                    Spaces automatically act as a logical AND. Wrap your text in quotes to bypass heuristics and search for an exact string.
+                                    <div class="mt-1.5 flex flex-wrap gap-1.5">
+                                        <code class="px-1.5 py-0.5 bg-theme-surface-alt border border-theme-border rounded text-[10px] font-mono text-theme-text-main">intro engr design</code>
+                                        <code class="px-1.5 py-0.5 bg-theme-surface-alt border border-theme-border rounded text-[10px] font-mono text-theme-text-main">"M E 123"</code>
+                                    </div>
+                                </li>
+                                
+                                <li class="pl-0.5">
+                                    <strong class="text-theme-text-main">Logic & Grouping:</strong> 
+                                    Use <code class="text-theme-text-main font-semibold">&&</code> for AND, <code class="text-theme-text-main font-semibold">||</code> for OR, and <code class="text-theme-text-main font-semibold">!</code> for NOT. Use parentheses <code class="text-theme-text-main font-semibold">()</code> to group complex expressions together.
+                                    <div class="mt-1.5">
+                                        <code class="px-1.5 py-0.5 bg-theme-surface-alt border border-theme-border rounded text-[10px] font-mono text-theme-text-main">(CSE || AA) && !120</code>
+                                    </div>
+                                </li>
+
+                                <li class="pl-0.5">
+                                    <strong class="text-theme-text-main">Wildcards:</strong> 
+                                    Use <code class="text-theme-text-main font-semibold">*</code> (or <code class="text-theme-text-main font-semibold">%</code>) to match any number of characters. Use <code class="text-theme-text-main font-semibold">?</code> (or <code class="text-theme-text-main font-semibold">_</code>) to match exactly one single character.
+                                    <div class="mt-1.5 flex flex-wrap items-center gap-1.5">
+                                        <code class="px-1.5 py-0.5 bg-theme-surface-alt border border-theme-border rounded text-[10px] font-mono text-theme-text-main">appmath *</code> 
+                                        <span>or</span> 
+                                        <code class="px-1.5 py-0.5 bg-theme-surface-alt border border-theme-border rounded text-[10px] font-mono text-theme-text-main">CHEM E 3?0</code>
+                                    </div>
+                                </li>
+
+                                <li class="pl-0.5">
+                                    <strong class="text-theme-text-main">Targeted Fields:</strong> 
+                                    Force a search on a specific field using prefixes. Available fields are <code class="text-theme-text-main font-semibold">course:</code>, <code class="text-theme-text-main font-semibold">building:</code>, <code class="text-theme-text-main font-semibold">room:</code>, <code class="text-theme-text-main font-semibold">instructor:</code> (or <code class="text-theme-text-main font-semibold">prof:</code>), <code class="text-theme-text-main font-semibold">sln:</code>, <code class="text-theme-text-main font-semibold">title:</code>, and <code class="text-theme-text-main font-semibold">gened:</code>.
+                                    <div class="mt-1.5 flex flex-wrap gap-1.5">
+                                        <code class="px-1.5 py-0.5 bg-theme-surface-alt border border-theme-border rounded text-[10px] font-mono text-theme-text-main">building:PCAR</code>
+                                        <code class="px-1.5 py-0.5 bg-theme-surface-alt border border-theme-border rounded text-[10px] font-mono text-theme-text-main">instructor:"Smith"</code>
+                                    </div>
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
                 </div>
+                
                 <button id="search-btn" class="px-6 py-2.5 rounded-lg text-sm font-bold transition-all bg-theme-border text-theme-text-muted cursor-not-allowed shrink-0" disabled>
                     Search
                 </button>
